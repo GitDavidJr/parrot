@@ -11,6 +11,8 @@ load_dotenv(ENV_PATH)
 class Settings(BaseModel):
     openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
     engine: str = os.getenv("DEFAULT_ENGINE", "openai")  # "openai" or "free"
+    openai_model: str = os.getenv("OPENAI_MODEL", "gpt-5.4-mini")
+    theme: str = os.getenv("DEFAULT_THEME", "light") # "light" by default!
     source_lang: str = os.getenv("DEFAULT_SOURCE_LANG", "pt")
     target_lang: str = os.getenv("DEFAULT_TARGET_LANG", "en")
     openai_voice: str = os.getenv("OPENAI_VOICE", "alloy")
@@ -38,6 +40,8 @@ def save_settings():
     lines = [
         f"OPENAI_API_KEY={settings.openai_api_key}\n",
         f"DEFAULT_ENGINE={settings.engine}\n",
+        f"OPENAI_MODEL={settings.openai_model}\n",
+        f"DEFAULT_THEME={settings.theme}\n",
         f"DEFAULT_SOURCE_LANG={settings.source_lang}\n",
         f"DEFAULT_TARGET_LANG={settings.target_lang}\n",
         f"OPENAI_VOICE={settings.openai_voice}\n",

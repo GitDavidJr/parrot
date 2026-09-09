@@ -4,9 +4,10 @@ from openai import AsyncOpenAI
 from src.engines.base import BaseTranslationEngine
 
 class OpenAIEngine(BaseTranslationEngine):
-    def __init__(self, api_key: str, default_voice: str = "alloy"):
+    def __init__(self, api_key: str, default_voice: str = "alloy", model: str = "gpt-5.4-mini"):
         self.api_key = api_key
         self.default_voice = default_voice
+        self.model = model
         self._client: AsyncOpenAI | None = None
 
     @property
@@ -19,19 +20,31 @@ class OpenAIEngine(BaseTranslationEngine):
         self.api_key = api_key
         self._client = AsyncOpenAI(api_key=self.api_key)
 
+    def update_model(self, model: str):
+        self.model = model
+
     async def transcribe(self, audio_bytes: bytes, lang: str = "pt") -> str:
         if not self.api_key:
             raise ValueError("OpenAI API Key não configurada.")
 
-        # Whisper accepts a tuple ('filename.wav', bytes, 'content_type')
+        # Whisper / transcribe accepts a tuple ('filename.wav', bytes, 'content_type')
         file_tuple = ("audio.wav", audio_bytes, "audio/wav")
-        response = await self.client.audio.transcriptions.create(
-            model="whisper-1",
-            file=file_tuple,
-            language=lang,
-            temperature=0.0
-        )
-        return response.text.strip()
+        try:
+            response = await self.client.audio.transcriptions.create(
+                model="gpt-4o-mini-transcribe",
+                file=file_tuple,
+                language=lang,
+                temperature=0.0
+            )
+            return response.text.strip()
+        except Exception:
+            response = await self.client.audio.transcriptions.create(
+                model="whisper-1",
+                file=file_tuple,
+                language=lang,
+                temperature=0.0
+            )
+            return response.text.strip()
 
     async def translate(self, text: str, source_lang: str = "pt", target_lang: str = "en") -> str:
         if not text:
@@ -57,13 +70,13 @@ class OpenAIEngine(BaseTranslationEngine):
         )
 
         completion = await self.client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=self.model,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": text}
             ],
             temperature=0.2,
-            max_tokens=250
+            max_completion_tokens=250
         )
         return completion.choices[0].message.content.strip()
 

@@ -1,0 +1,9 @@
+#!/bin/bash
+DIR="/Users/davidjunior/dev/parrot"
+cd "$DIR"
+
+if [ -f "$DIR/.venv/bin/python3" ]; then
+    exec "$DIR/.venv/bin/python3" "$DIR/main.py"
+else
+    exec python3 "$DIR/main.py"
+fi

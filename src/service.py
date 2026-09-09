@@ -13,7 +13,8 @@ class ParrotService:
     def __init__(self):
         self.openai_engine = OpenAIEngine(
             api_key=settings.openai_api_key,
-            default_voice=settings.openai_voice
+            default_voice=settings.openai_voice,
+            model=settings.openai_model
         )
         self.free_engine = FreeEngine(
             default_voice_en=settings.edge_voice_en,
@@ -317,6 +318,11 @@ class ParrotService:
         if "vad_energy_threshold" in new_settings:
             settings.vad_energy_threshold = float(new_settings["vad_energy_threshold"])
             self.recorder.energy_threshold = settings.vad_energy_threshold
+        if "openai_model" in new_settings:
+            settings.openai_model = new_settings["openai_model"]
+            self.openai_engine.update_model(settings.openai_model)
+        if "theme" in new_settings:
+            settings.theme = new_settings["theme"]
         if "capture_mode" in new_settings:
             settings.capture_mode = new_settings["capture_mode"]
 

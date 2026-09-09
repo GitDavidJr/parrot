@@ -1,4 +1,4 @@
-// Parrot Client Controller
+// Parrot Desktop Client Controller
 let ws = null;
 let currentStatus = {
   is_active: false,
@@ -22,13 +22,47 @@ const feedUser = document.getElementById('feed-user');
 const feedMeeting = document.getElementById('feed-meeting');
 const btnPtt = document.getElementById('btn-ptt');
 const lblVirtualDev = document.getElementById('lbl-virtual-dev');
+const lblPhysicalMic = document.getElementById('lbl-physical-mic');
+const badgeModel = document.getElementById('badge-model');
+
+// Theme Management (Default: Light Mode)
+function initTheme() {
+  const savedTheme = localStorage.getItem('parrot_theme') || 'light';
+  applyTheme(savedTheme);
+}
+
+function applyTheme(theme) {
+  const html = document.documentElement;
+  const themeIcon = document.getElementById('theme-icon');
+  if (theme === 'dark') {
+    html.classList.remove('light');
+    html.classList.add('dark');
+    if (themeIcon) themeIcon.textContent = '☀️';
+  } else {
+    html.classList.remove('dark');
+    html.classList.add('light');
+    if (themeIcon) themeIcon.textContent = '🌙';
+  }
+  localStorage.setItem('parrot_theme', theme);
+}
+
+function toggleTheme() {
+  const isDark = document.documentElement.classList.contains('dark');
+  const newTheme = isDark ? 'light' : 'dark';
+  applyTheme(newTheme);
+  fetch('/api/settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ theme: newTheme })
+  });
+}
 
 function initWebSocket() {
   const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
   ws = new WebSocket(`${protocol}//${location.host}/ws`);
 
   ws.onopen = () => {
-    console.log('[Parrot WS] Conectado ao servidor de áudio.');
+    console.log('[Parrot WS] Conectado ao servidor desktop.');
   };
 
   ws.onmessage = (event) => {
@@ -37,8 +71,8 @@ function initWebSocket() {
   };
 
   ws.onclose = () => {
-    console.log('[Parrot WS] Desconectado. Reconectando em 1s...');
-    setTimeout(initWebSocket, 1000);
+    console.log('[Parrot WS] Reconectando...');
+    setTimeout(initWebSocket, 1200);
   };
 }
 
@@ -50,6 +84,11 @@ function handleServerMessage(msg) {
     currentStatus.status = data.status;
     currentStatus.settings = data.settings;
     currentStatus.devices = data.devices;
+    
+    if (data.settings && data.settings.theme) {
+      applyTheme(data.settings.theme);
+    }
+    
     updateUIState();
     populateDevices(data.devices, data.settings);
 
@@ -79,9 +118,9 @@ function updateMeter(level, isSpeaking) {
   micMeterVal.textContent = `${pct}%`;
 
   if (isSpeaking) {
-    micMeterFill.className = "w-full bg-emerald-400 rounded shadow-lg shadow-emerald-500/50";
+    micMeterFill.className = "w-full bg-emerald-500 rounded shadow-md shadow-emerald-500/40";
   } else {
-    micMeterFill.className = "w-full bg-parrot-500 rounded transition-all duration-75";
+    micMeterFill.className = "w-full bg-emerald-600/80 rounded transition-all duration-75";
   }
 }
 
@@ -91,30 +130,36 @@ function updateStatusPill(status, message) {
   if (status === 'listening') {
     statusDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse';
     btnMasterText.textContent = 'PAUSAR TRADUÇÃO';
-    btnMasterToggle.className = 'cursor-pointer group relative px-7 py-4 rounded-2xl font-bold text-base transition-all duration-200 shadow-xl flex items-center gap-3 bg-red-600 hover:bg-red-500 text-white shadow-red-500/25 active:scale-95';
+    btnMasterToggle.className = 'cursor-pointer group relative px-7 py-3.5 rounded-xl font-bold text-sm transition-all duration-200 shadow-md flex items-center gap-2.5 bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/25 active:scale-98';
     btnMasterIcon.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
   } else if (status === 'transcribing') {
-    statusDot.className = 'w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping';
+    statusDot.className = 'w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping';
   } else if (status === 'translating') {
-    statusDot.className = 'w-2.5 h-2.5 rounded-full bg-sky-400 animate-pulse';
+    statusDot.className = 'w-2.5 h-2.5 rounded-full bg-sky-500 animate-pulse';
   } else if (status === 'speaking') {
-    statusDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 animate-bounce';
+    statusDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-600 animate-bounce';
   } else {
-    statusDot.className = 'w-2.5 h-2.5 rounded-full bg-slate-500';
+    statusDot.className = 'w-2.5 h-2.5 rounded-full bg-slate-400';
     btnMasterText.textContent = 'INICIAR TRADUÇÃO';
-    btnMasterToggle.className = 'cursor-pointer group relative px-7 py-4 rounded-2xl font-bold text-base transition-all duration-200 shadow-xl flex items-center gap-3 bg-gradient-to-r from-parrot-500 to-parrot-600 hover:from-parrot-400 hover:to-parrot-500 text-slate-950 shadow-parrot-500/25 active:scale-95';
+    btnMasterToggle.className = 'cursor-pointer group relative px-7 py-3.5 rounded-xl font-bold text-sm transition-all duration-200 shadow-md flex items-center gap-2.5 bg-emerald-600 hover:bg-emerald-500 active:scale-98 text-white shadow-emerald-600/20';
     btnMasterIcon.innerHTML = '<path d="M8 5v14l11-7z"/>';
   }
 }
 
 function updateUIState() {
   const engine = currentStatus.settings.engine || 'openai';
+  const model = currentStatus.settings.openai_model || 'gpt-5.4-mini';
+
+  if (badgeModel) {
+    badgeModel.textContent = model.replace('-mini', ' Mini').replace('gpt-', 'GPT-');
+  }
+
   if (engine === 'openai') {
-    btnEngineOpenAI.className = 'cursor-pointer px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 bg-parrot-600 text-white shadow-sm';
-    btnEngineFree.className = 'cursor-pointer px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 text-slate-400 hover:text-white';
+    btnEngineOpenAI.className = 'cursor-pointer px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 bg-emerald-600 text-white shadow-xs';
+    btnEngineFree.className = 'cursor-pointer px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white';
   } else {
-    btnEngineFree.className = 'cursor-pointer px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 bg-sky-600 text-white shadow-sm';
-    btnEngineOpenAI.className = 'cursor-pointer px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 text-slate-400 hover:text-white';
+    btnEngineFree.className = 'cursor-pointer px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 bg-sky-600 text-white shadow-xs';
+    btnEngineOpenAI.className = 'cursor-pointer px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white';
   }
 
   updateStatusPill(currentStatus.status);
@@ -142,39 +187,38 @@ function appendMessageCard(item) {
   const isUser = item.channel === 'user_to_meeting';
   const container = isUser ? feedUser : feedMeeting;
 
-  // Clear placeholder if first message
   if (container.querySelector('svg')) {
     container.innerHTML = '';
   }
 
   const card = document.createElement('div');
-  card.className = `p-4 rounded-xl border transition-all animate-fade-in ${
+  card.className = `p-3.5 rounded-xl border transition-all ${
     isUser 
-      ? 'bg-slate-900/90 border-emerald-500/30 shadow-md' 
-      : 'bg-slate-900/90 border-sky-500/30 shadow-md'
+      ? 'bg-emerald-50/50 dark:bg-slate-900/90 border-emerald-200 dark:border-emerald-800 shadow-xs' 
+      : 'bg-sky-50/50 dark:bg-slate-900/90 border-sky-200 dark:border-sky-800 shadow-xs'
   }`;
 
-  const headerColor = isUser ? 'text-emerald-400' : 'text-sky-400';
+  const headerColor = isUser ? 'text-emerald-700 dark:text-emerald-400' : 'text-sky-700 dark:text-sky-400';
   const headerLabel = isUser ? 'Você (Falou em Português)' : 'Participante (Falou em Inglês)';
-  const translatedLabel = isUser ? 'Injetado no Meet/Zoom (Inglês):' : 'Traduzido para Você (Português):';
+  const translatedLabel = isUser ? 'Injetado na Chamada (Inglês):' : 'Traduzido para Você (Português):';
 
   card.innerHTML = `
-    <div class="flex items-center justify-between mb-2">
+    <div class="flex items-center justify-between mb-1.5">
       <span class="text-xs font-bold ${headerColor} flex items-center gap-1.5">
-        <span class="w-2 h-2 rounded-full ${isUser ? 'bg-emerald-500' : 'bg-sky-500'}"></span>
+        <span class="w-2 h-2 rounded-full ${isUser ? 'bg-emerald-600' : 'bg-sky-600'}"></span>
         ${headerLabel}
       </span>
       <div class="flex items-center gap-2">
-        <span class="text-[10px] font-mono text-slate-400 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
+        <span class="text-[10px] font-mono text-slate-500 bg-white dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 shadow-xs">
           ⚡ ${item.latency_ms || 0}ms
         </span>
-        <span class="text-[10px] text-slate-500 font-mono">${item.timestamp}</span>
+        <span class="text-[10px] text-slate-400 font-mono">${item.timestamp}</span>
       </div>
     </div>
-    <div class="text-xs text-slate-300 italic mb-2 border-l-2 border-slate-700 pl-2">
+    <div class="text-xs text-slate-600 dark:text-slate-300 italic mb-2 pl-2 border-l-2 ${isUser ? 'border-emerald-300 dark:border-emerald-700' : 'border-sky-300 dark:border-sky-700'}">
       "${escapeHtml(item.original)}"
     </div>
-    <div class="text-sm font-semibold text-white bg-slate-950/60 p-2.5 rounded-lg border border-slate-800">
+    <div class="text-sm font-semibold text-slate-900 dark:text-white bg-white dark:bg-slate-950 p-2.5 rounded-lg border ${isUser ? 'border-emerald-100 dark:border-slate-800' : 'border-sky-100 dark:border-slate-800'} shadow-xs">
       <span class="text-[10px] block font-normal text-slate-400 mb-0.5">${translatedLabel}</span>
       "${escapeHtml(item.translated)}"
     </div>
@@ -291,6 +335,7 @@ function populateDevices(devices, setts) {
   const selMic = document.getElementById('sel-input-mic');
   const selVirt = document.getElementById('sel-virtual-mic');
   const selPhones = document.getElementById('sel-headphones');
+  const selModel = document.getElementById('sel-openai-model');
 
   selMic.innerHTML = '';
   const chosenMicId = setts.input_device_id ?? devices.recommended.mic_id;
@@ -300,8 +345,7 @@ function populateDevices(devices, setts) {
     opt.textContent = `${d.name} (${d.sample_rate}Hz)`;
     if (d.id === chosenMicId) {
       opt.selected = true;
-      const lblMic = document.getElementById('lbl-physical-mic');
-      if (lblMic) lblMic.textContent = d.name;
+      if (lblPhysicalMic) lblPhysicalMic.textContent = d.name;
     }
     selMic.appendChild(opt);
   });
@@ -314,7 +358,7 @@ function populateDevices(devices, setts) {
     if (d.id === (setts.virtual_output_device_id ?? devices.recommended.virtual_mic_id)) opt.selected = true;
     selVirt.appendChild(opt);
   });
-  if (devices.virtual_outputs.length > 0) {
+  if (devices.virtual_outputs.length > 0 && lblVirtualDev) {
     lblVirtualDev.textContent = devices.virtual_outputs[0].name;
   }
 
@@ -327,6 +371,10 @@ function populateDevices(devices, setts) {
     selPhones.appendChild(opt);
   });
 
+  if (selModel && setts.openai_model) {
+    selModel.value = setts.openai_model;
+  }
+
   document.getElementById('input-openai-key').value = setts.openai_api_key || '';
   document.getElementById('sel-openai-voice').value = setts.openai_voice || 'alloy';
   document.getElementById('sel-edge-voice').value = setts.edge_voice_en || 'en-US-ChristopherNeural';
@@ -335,11 +383,13 @@ function populateDevices(devices, setts) {
 }
 
 async function saveSettingsForm() {
+  const selModel = document.getElementById('sel-openai-model');
   const payload = {
     input_device_id: parseInt(document.getElementById('sel-input-mic').value),
     virtual_output_device_id: parseInt(document.getElementById('sel-virtual-mic').value),
     headphones_device_id: parseInt(document.getElementById('sel-headphones').value),
     openai_api_key: document.getElementById('input-openai-key').value.trim(),
+    openai_model: selModel ? selModel.value : 'gpt-5.4-mini',
     openai_voice: document.getElementById('sel-openai-voice').value,
     edge_voice_en: document.getElementById('sel-edge-voice').value,
     vad_silence_threshold_ms: parseInt(document.getElementById('range-silence').value),
@@ -352,8 +402,9 @@ async function saveSettingsForm() {
   });
 
   if (res.ok) {
+    currentStatus.settings.openai_model = payload.openai_model;
+    updateUIState();
     closeSettingsModal();
-    alert('Configurações salvas com sucesso!');
   }
 }
 
@@ -371,5 +422,6 @@ async function testAudioDevice(target) {
   }
 }
 
-// Initialize
+// Initialize Theme & WS
+initTheme();
 initWebSocket();

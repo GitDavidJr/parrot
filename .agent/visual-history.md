@@ -1,6 +1,6 @@
 # Histórico Visual do Projeto — Parrot
 
-> Use os identificadores para restaurar qualquer versão: `Cores - C - v1`, `Tipografia - T - v1`, `Componentes - K - v2`, etc.
+> Use os identificadores para restaurar qualquer versão: `Cores - C - v1`, `Tipografia - T - v1`, `Componentes - K - v2`, `Tema Completo - TC - v3`, etc.
 
 ---
 
@@ -52,3 +52,26 @@
 
 **Data:** 2026-09-09  
 **Motivo:** Atualização do ícone oficial para silhueta 3D verde minimalista virada para a direita (estilo minimalista Reserva / macOS squircle app icon)
+
+---
+
+## Tema Completo - TC - v3 (Light Mode Padrão)
+
+**Data:** 2026-09-09  
+**Motivo:** Transição para Light Mode como padrão do sistema (Apple macOS Light HIG), com superfícies limpas, cards brancos e acentos esmeralda.
+
+```json
+{
+  "theme": "light",
+  "primary": "#059669",
+  "primary-hover": "#047857",
+  "background": "#F8FAFC",
+  "surface": "#FFFFFF",
+  "surface-border": "#E2E8F0",
+  "text-primary": "#0F172A",
+  "text-secondary": "#475569",
+  "text-muted": "#64748B",
+  "feed-user": "#ECFDF5",
+  "feed-meeting": "#F0F9FF"
+}
+```
