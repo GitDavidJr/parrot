@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Parrot — Tradutor em Tempo Real para Chamadas</title>
+  <link rel="icon" type="image/png" href="/assets/icon.png" />
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            parrot: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              400: '#34d399',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+            },
+            surface: '#1E293B',
+            darkbg: '#0F172A',
+            cardborder: '#334155',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.1); opacity: 0.3; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+    .pulse-ring {
+      animation: pulse-ring 2s infinite ease-in-out;
+    }
+    /* Custom sleek scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0F172A;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+  </style>
+</head>
+<body class="bg-darkbg text-slate-100 min-h-screen font-sans antialiased flex flex-col selection:bg-parrot-500 selection:text-white">
+
+  <!-- Top Navigation Bar -->
+  <header class="border-b border-cardborder bg-slate-900/80 backdrop-blur-md sticky top-0 z-40 px-6 py-3.5 flex items-center justify-between">
+    <!-- Brand Logo & Title -->
+    <div class="flex items-center gap-3.5">
+      <div class="relative flex items-center justify-center">
+        <div id="logo-ring" class="absolute -inset-1 rounded-full bg-parrot-500/30 blur-sm pulse-ring"></div>
+        <img src="/assets/icon.png" alt="Parrot Logo" class="w-11 h-11 rounded-full object-cover relative ring-2 ring-parrot-500/60 shadow-lg shadow-parrot-500/20" />
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="font-bold text-xl tracking-tight text-white flex items-center gap-1.5">
+            Parrot
+            <span class="text-xs px-2 py-0.5 rounded-full bg-parrot-500/20 text-parrot-400 font-semibold border border-parrot-500/30">v1.0 Realtime</span>
+          </h1>
+        </div>
+        <p class="text-xs text-slate-400">Tradução Simultânea para Meet, Zoom, Teams & Discord</p>
+      </div>
+    </div>
+
+    <!-- Quick Status Pill -->
+    <div class="flex items-center gap-3">
+      <div id="status-badge" class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-800 border border-cardborder text-xs font-medium text-slate-300 shadow-inner">
+        <span id="status-dot" class="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
+        <span id="status-text">Inativo</span>
+      </div>
+
+      <!-- Engine Selector (OpenAI vs Free) -->
+      <div class="flex items-center bg-slate-800/90 p-1 rounded-xl border border-cardborder">
+        <button id="btn-engine-openai" onclick="setEngine('openai')" class="cursor-pointer px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 bg-parrot-600 text-white shadow-sm">
+          <span>⚡ OpenAI</span>
+        </button>
+        <button id="btn-engine-free" onclick="setEngine('free')" class="cursor-pointer px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 text-slate-400 hover:text-white">
+          <span>🆓 Gratuito</span>
+        </button>
+      </div>
+
+      <!-- HUD Floating Button -->
+      <button onclick="openHUD()" title="Abrir janela de legendas flutuantes sobreposta ao Zoom/Meet" class="cursor-pointer px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-cardborder text-xs font-medium text-slate-200 transition-all flex items-center gap-2 shadow-sm hover:border-slate-500">
+        <svg class="w-4 h-4 text-parrot-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+        <span>Legendas HUD</span>
+      </button>
+
+      <!-- Settings Button -->
+      <button onclick="openSettingsModal()" class="cursor-pointer p-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-cardborder text-slate-300 hover:text-white transition-all shadow-sm">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
+
+    <!-- Quick Call Banner / Master Control -->
+    <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border border-cardborder rounded-2xl p-6 shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
+      <div class="space-y-1.5 z-10">
+        <div class="flex items-center gap-2">
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            Microfone da Chamada: <strong class="ml-1 text-white" id="lbl-virtual-dev">Perssua</strong>
+          </span>
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20">
+            Par: <strong class="ml-1 text-white">Português ⇄ Inglês</strong>
+          </span>
+        </div>
+        <h2 class="text-2xl font-bold text-white tracking-tight">Tradução em Tempo Real para Reuniões</h2>
+        <p class="text-sm text-slate-300 max-w-xl">
+          Fale em português no seu microfone e o Parrot injetará voz natural em inglês direto no seu Google Meet / Zoom através do driver virtual.
+        </p>
+      </div>
+
+      <!-- Live Volume VU Meter & Toggle Button -->
+      <div class="flex items-center gap-5 z-10">
+        <!-- Mic Visualizer Bar -->
+        <div class="flex flex-col items-center gap-1.5">
+          <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400">Microfone</span>
+          <div class="w-7 h-20 bg-slate-950 rounded-lg p-1 flex flex-col justify-end border border-slate-700">
+            <div id="mic-meter-fill" class="w-full bg-parrot-500 rounded transition-all duration-75" style="height: 0%"></div>
+          </div>
+          <span id="mic-meter-val" class="text-[10px] text-slate-400 font-mono">0%</span>
+        </div>
+
+        <!-- Master Start/Stop Button -->
+        <button id="btn-master-toggle" onclick="toggleSession()" class="cursor-pointer group relative px-7 py-4 rounded-2xl font-bold text-base transition-all duration-200 shadow-xl flex items-center gap-3 bg-gradient-to-r from-parrot-500 to-parrot-600 hover:from-parrot-400 hover:to-parrot-500 text-slate-950 hover:shadow-parrot-500/25 active:scale-95">
+          <svg id="btn-master-icon" class="w-6 h-6 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          <span id="btn-master-text">INICIAR TRADUÇÃO</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Instructions Accordion / Quick Helper -->
+    <div class="bg-slate-900/60 border border-cardborder/60 rounded-xl p-4 text-xs text-slate-300 flex items-start gap-3">
+      <div class="p-2 rounded-lg bg-parrot-500/10 text-parrot-400 shrink-0">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      </div>
+      <div class="space-y-1">
+        <p class="font-semibold text-white">Como conectar no Zoom / Google Meet / Discord em 1 minuto:</p>
+        <p>1. No seu aplicativo de reunião (Google Meet ou Zoom), vá em <strong>Configurações de Áudio</strong> e em <strong>Microfone</strong> selecione: <span class="text-parrot-400 font-semibold underline">Perssua</span>.</p>
+        <p>2. Mantenha o botão <strong>"INICIAR TRADUÇÃO"</strong> ativado aqui no Parrot.</p>
+        <p>3. Fale normalmente em português. O Parrot detecta o silêncio ao terminar a frase e fala em inglês com voz humana cristalina para os gringos!</p>
+      </div>
+    </div>
+
+    <!-- Dual Channel Translation Live Columns -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+      <!-- Column 1: You -> Call (PT -> EN) -->
+      <div class="bg-surface border border-cardborder rounded-2xl flex flex-col h-[560px] shadow-lg overflow-hidden">
+        <!-- Channel Header -->
+        <div class="p-4 border-b border-cardborder bg-slate-800/60 flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <span class="w-3 h-3 rounded-full bg-parrot-500"></span>
+            <div>
+              <h3 class="font-bold text-sm text-white">Você ➔ Reunião</h3>
+              <p class="text-xs text-slate-400">Você fala em Português ➔ Traduzido para Inglês na Chamada</p>
+            </div>
+          </div>
+          <span class="text-xs font-mono px-2 py-1 rounded bg-slate-900 text-parrot-400 border border-slate-700">PT ➔ EN</span>
+        </div>
+
+        <!-- Mode Bar (VAD vs Push-to-Talk) -->
+        <div class="px-4 py-2 bg-slate-900/40 border-b border-cardborder flex items-center justify-between text-xs">
+          <div class="flex items-center gap-2">
+            <span class="text-slate-400">Modo de Voz:</span>
+            <label class="cursor-pointer flex items-center gap-1.5 text-slate-200">
+              <input type="radio" name="vad_mode" value="vad" checked onchange="changeCaptureMode('vad')" class="text-parrot-500 focus:ring-0">
+              <span>Automático (VAD)</span>
+            </label>
+            <label class="cursor-pointer flex items-center gap-1.5 text-slate-200 ml-2">
+              <input type="radio" name="vad_mode" value="ptt" onchange="changeCaptureMode('ptt')" class="text-parrot-500 focus:ring-0">
+              <span>Push-to-Talk (PTT)</span>
+            </label>
+          </div>
+          <!-- Push to talk button if active -->
+          <button id="btn-ptt" onmousedown="pttPress()" onmouseup="pttRelease()" class="cursor-pointer hidden px-3 py-1 bg-parrot-600 hover:bg-parrot-500 active:bg-parrot-700 text-white font-bold rounded-lg text-xs transition-all shadow select-none">
+            🎙️ Segure para Falar
+          </button>
+        </div>
+
+        <!-- Messages Feed (You -> Meeting) -->
+        <div id="feed-user" class="flex-1 p-4 overflow-y-auto space-y-3">
+          <div class="text-center py-12 text-slate-500 text-xs">
+            <svg class="w-10 h-10 mx-auto mb-2 opacity-40 text-parrot-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+            Nenhuma fala sua registrada ainda.<br/>Inicie a tradução e fale no microfone ou digite abaixo.
+          </div>
+        </div>
+
+        <!-- Quick Text-to-Speech Input (Speak into meeting without talking) -->
+        <div class="p-3 bg-slate-900/90 border-t border-cardborder">
+          <form onsubmit="handleQuickSpeak(event)" class="flex gap-2">
+            <input id="input-quick-speak" type="text" placeholder="Digite em português para falar na chamada..." class="cursor-text flex-1 bg-slate-800 border border-cardborder rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-parrot-500 transition-colors" />
+            <button type="submit" class="cursor-pointer px-4 py-2 bg-parrot-600 hover:bg-parrot-500 active:bg-parrot-700 text-white font-semibold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-sm">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+              <span>Falar</span>
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Column 2: Call -> You (EN -> PT) -->
+      <div class="bg-surface border border-cardborder rounded-2xl flex flex-col h-[560px] shadow-lg overflow-hidden">
+        <!-- Channel Header -->
+        <div class="p-4 border-b border-cardborder bg-slate-800/60 flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <span class="w-3 h-3 rounded-full bg-sky-500"></span>
+            <div>
+              <h3 class="font-bold text-sm text-white">Reunião ➔ Você</h3>
+              <p class="text-xs text-slate-400">Participantes falam em Inglês ➔ Traduzido para Português</p>
+            </div>
+          </div>
+          <span class="text-xs font-mono px-2 py-1 rounded bg-slate-900 text-sky-400 border border-slate-700">EN ➔ PT</span>
+        </div>
+
+        <!-- Simulation & Audio Input helper -->
+        <div class="px-4 py-2 bg-slate-900/40 border-b border-cardborder flex items-center justify-between text-xs">
+          <span class="text-slate-400">Simular fala em inglês para teste:</span>
+          <div class="flex items-center gap-1.5">
+            <button onclick="simulateSpeech('Hi David, could you give us an update on the roadmap?')" class="cursor-pointer px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-[11px] transition-all">
+              "Roadmap..."
+            </button>
+            <button onclick="simulateSpeech('Sounds great, we are ready to move forward with this.')" class="cursor-pointer px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-[11px] transition-all">
+              "Sounds great..."
+            </button>
+          </div>
+        </div>
+
+        <!-- Messages Feed (Meeting -> You) -->
+        <div id="feed-meeting" class="flex-1 p-4 overflow-y-auto space-y-3">
+          <div class="text-center py-12 text-slate-500 text-xs">
+            <svg class="w-10 h-10 mx-auto mb-2 opacity-40 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+            Nenhuma fala da reunião recebida ainda.<br/>Use os botões de simulação acima para testar a tradução.
+          </div>
+        </div>
+
+        <!-- Custom English sentence test -->
+        <div class="p-3 bg-slate-900/90 border-t border-cardborder">
+          <form onsubmit="handleSimulateCustom(event)" class="flex gap-2">
+            <input id="input-simulate-en" type="text" placeholder="Digite uma frase em inglês para simular o gringo falando..." class="cursor-text flex-1 bg-slate-800 border border-cardborder rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 transition-colors" />
+            <button type="submit" class="cursor-pointer px-4 py-2 bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white font-semibold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-sm">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              <span>Testar</span>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Settings Modal -->
+  <div id="modal-settings" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-surface border border-cardborder rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-cardborder pb-4">
+        <div class="flex items-center gap-2.5">
+          <div class="p-2 rounded-xl bg-parrot-500/10 text-parrot-400">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg>
+          </div>
+          <h3 class="font-bold text-lg text-white">Configurações do Parrot</h3>
+        </div>
+        <button onclick="closeSettingsModal()" class="cursor-pointer p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+
+      <!-- Settings Fields -->
+      <div class="space-y-4 text-xs">
+        <!-- Input Mic -->
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1.5">Seu Microfone Físico (Entrada):</label>
+          <select id="sel-input-mic" class="cursor-pointer w-full bg-slate-900 border border-cardborder rounded-xl p-2.5 text-white focus:outline-none focus:border-parrot-500"></select>
+        </div>
+
+        <!-- Virtual Mic (Perssua) -->
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1.5">Microfone Virtual da Chamada (Perssua / BlackHole):</label>
+          <select id="sel-virtual-mic" class="cursor-pointer w-full bg-slate-900 border border-cardborder rounded-xl p-2.5 text-white focus:outline-none focus:border-parrot-500"></select>
+          <p class="text-[11px] text-slate-400 mt-1">Este é o dispositivo que você seleciona como microfone no Google Meet ou Zoom.</p>
+        </div>
+
+        <!-- Headphones -->
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1.5">Seus Fones de Ouvido (Saída):</label>
+          <select id="sel-headphones" class="cursor-pointer w-full bg-slate-900 border border-cardborder rounded-xl p-2.5 text-white focus:outline-none focus:border-parrot-500"></select>
+        </div>
+
+        <!-- OpenAI Key -->
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1.5">OpenAI API Key:</label>
+          <div class="flex gap-2">
+            <input id="input-openai-key" type="password" class="cursor-text flex-1 bg-slate-900 border border-cardborder rounded-xl p-2.5 text-white font-mono text-[11px] focus:outline-none focus:border-parrot-500" />
+            <button onclick="toggleKeyVisibility()" class="cursor-pointer px-3 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-300">👁️</button>
+          </div>
+        </div>
+
+        <!-- OpenAI Voice -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1.5">Voz OpenAI (Inglês):</label>
+            <select id="sel-openai-voice" class="cursor-pointer w-full bg-slate-900 border border-cardborder rounded-xl p-2.5 text-white focus:outline-none focus:border-parrot-500">
+              <option value="alloy">Alloy (Neutro/Moderno)</option>
+              <option value="echo">Echo (Masculino Natural)</option>
+              <option value="fable">Fable (Expressivo)</option>
+              <option value="onyx">Onyx (Masculino Grave)</option>
+              <option value="nova">Nova (Feminino Confiante)</option>
+              <option value="shimmer">Shimmer (Feminino Claro)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1.5">Voz Gratuita (Edge-TTS):</label>
+            <select id="sel-edge-voice" class="cursor-pointer w-full bg-slate-900 border border-cardborder rounded-xl p-2.5 text-white focus:outline-none focus:border-parrot-500">
+              <option value="en-US-ChristopherNeural">Christopher (Natural Male)</option>
+              <option value="en-US-JennyNeural">Jenny (Natural Female)</option>
+              <option value="en-US-GuyNeural">Guy (Professional Male)</option>
+              <option value="en-US-AriaNeural">Aria (Friendly Female)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- VAD Silence Slider -->
+        <div>
+          <div class="flex justify-between font-semibold text-slate-300 mb-1.5">
+            <span>Tempo de Silêncio para Traduzir:</span>
+            <span id="lbl-silence-val" class="text-parrot-400 font-mono">650ms</span>
+          </div>
+          <input id="range-silence" type="range" min="300" max="1500" step="50" value="650" oninput="document.getElementById('lbl-silence-val').textContent = this.value + 'ms'" class="cursor-pointer w-full accent-parrot-500">
+          <p class="text-[11px] text-slate-400 mt-1">Quanto tempo após você parar de falar o Parrot deve esperar antes de traduzir.</p>
+        </div>
+
+        <!-- Audio Tests Buttons -->
+        <div class="pt-2 border-t border-cardborder flex gap-3">
+          <button onclick="testAudioDevice('perssua')" class="cursor-pointer flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold border border-cardborder transition-all flex items-center justify-center gap-1.5">
+            <span>🔊 Testar Som no Perssua</span>
+          </button>
+          <button onclick="testAudioDevice('headphones')" class="cursor-pointer flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold border border-cardborder transition-all flex items-center justify-center gap-1.5">
+            <span>🎧 Testar Som nos Fones</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="flex justify-end gap-3 pt-4 border-t border-cardborder">
+        <button onclick="closeSettingsModal()" class="cursor-pointer px-4 py-2 rounded-xl text-slate-300 hover:text-white bg-slate-800">Cancelar</button>
+        <button onclick="saveSettingsForm()" class="cursor-pointer px-5 py-2 rounded-xl bg-parrot-600 hover:bg-parrot-500 font-bold text-white shadow-md">Salvar Configurações</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/src/ui/app.js"></script>
+</body>
+</html>

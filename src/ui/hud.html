@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Parrot — Legendas HUD ao Vivo</title>
+  <link rel="icon" type="image/png" href="/assets/icon.png" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            parrot: '#10b981',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: rgba(15, 23, 42, 0.90);
+      backdrop-filter: blur(12px);
+    }
+    ::-webkit-scrollbar {
+      width: 4px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="text-slate-100 h-screen flex flex-col font-sans select-none overflow-hidden border border-slate-700/60 rounded-xl shadow-2xl">
+
+  <!-- HUD Top Minimalist Bar -->
+  <header class="bg-slate-900/80 px-4 py-2 flex items-center justify-between border-b border-slate-800 cursor-move">
+    <div class="flex items-center gap-2">
+      <img src="/assets/icon.png" alt="Parrot" class="w-5 h-5 rounded-full ring-1 ring-parrot" />
+      <span class="text-xs font-bold tracking-tight text-white">Parrot HUD</span>
+      <span id="hud-status" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+    </div>
+    <div class="flex items-center gap-2">
+      <span id="hud-mode" class="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-slate-800 text-parrot border border-slate-700">OpenAI</span>
+      <button onclick="clearHUD()" class="cursor-pointer text-[10px] text-slate-400 hover:text-white px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700">Limpar</button>
+    </div>
+  </header>
+
+  <!-- Live Subtitles Stream -->
+  <div id="hud-feed" class="flex-1 p-3.5 overflow-y-auto space-y-2.5 text-sm">
+    <div id="hud-placeholder" class="text-center py-8 text-slate-500 text-xs">
+      Aguardando falas da chamada...<br/>Posicione este HUD embaixo do seu Zoom ou Google Meet.
+    </div>
+  </div>
+
+  <script>
+    const feed = document.getElementById('hud-feed');
+    const placeholder = document.getElementById('hud-placeholder');
+    const statusDot = document.getElementById('hud-status');
+    const modeBadge = document.getElementById('hud-mode');
+
+    function connectWS() {
+      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const ws = new WebSocket(`${protocol}//${location.host}/ws`);
+
+      ws.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
+        if (msg.type === 'init') {
+          modeBadge.textContent = msg.data.settings.engine.toUpperCase();
+          if (msg.data.history && msg.data.history.length > 0) {
+            placeholder?.remove();
+            msg.data.history.slice(-10).forEach(appendSubtitle);
+          }
+        } else if (msg.type === 'new_message') {
+          placeholder?.remove();
+          appendSubtitle(msg.data);
+        } else if (msg.type === 'status_change') {
+          if (msg.data.status === 'speaking' || msg.data.status === 'listening') {
+            statusDot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+          } else if (msg.data.status === 'translating') {
+            statusDot.className = "w-2 h-2 rounded-full bg-amber-500 animate-pulse";
+          } else {
+            statusDot.className = "w-2 h-2 rounded-full bg-slate-500";
+          }
+        }
+      };
+
+      ws.onclose = () => {
+        setTimeout(connectWS, 2000);
+      };
+    }
+
+    function appendSubtitle(item) {
+      const isUser = item.channel === 'user_to_meeting';
+      const el = document.createElement('div');
+      el.className = `p-2.5 rounded-xl border transition-all ${
+        isUser 
+          ? 'bg-emerald-950/40 border-emerald-500/30' 
+          : 'bg-sky-950/40 border-sky-500/30'
+      }`;
+
+      const speakerLabel = isUser ? '🟢 Você (PT ➔ EN)' : '🔵 Reunião (EN ➔ PT)';
+      const originalText = item.original;
+      const translatedText = item.translated;
+
+      el.innerHTML = `
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-[10px] font-bold ${isUser ? 'text-emerald-400' : 'text-sky-400'}">${speakerLabel}</span>
+          <span class="text-[9px] font-mono text-slate-500">${item.timestamp || ''} • ${item.latency_ms || 0}ms</span>
+        </div>
+        <div class="text-xs text-slate-400 italic mb-0.5">"${originalText}"</div>
+        <div class="text-sm font-semibold text-white tracking-wide">"${translatedText}"</div>
+      `;
+
+      feed.appendChild(el);
+      feed.scrollTop = feed.scrollHeight;
+    }
+
+    function clearHUD() {
+      feed.innerHTML = '<div class="text-center py-8 text-slate-500 text-xs">HUD limpo. Aguardando novas falas...</div>';
+    }
+
+    connectWS();
+  </script>
+</body>
+</html>

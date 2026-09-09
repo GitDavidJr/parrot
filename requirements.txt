@@ -1,0 +1,17 @@
+fastapi>=0.115.0
+uvicorn>=0.32.0
+websockets>=13.0
+sounddevice>=0.5.1
+soundfile>=0.12.1
+numpy>=1.26.0
+openai>=1.50.0
+deep-translator>=1.11.4
+edge-tts>=6.1.12
+SpeechRecognition>=3.10.4
+miniaudio>=1.59
+pywebview>=5.1
+pyobjc-core>=10.0
+pyobjc-framework-Cocoa>=10.0
+pyobjc-framework-WebKit>=10.0
+pydantic>=2.8.0
+python-dotenv>=1.0.0
