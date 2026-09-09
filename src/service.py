@@ -76,7 +76,8 @@ class ParrotService:
         self.is_active = True
         self.status = "listening"
         loop = asyncio.get_event_loop()
-        self.recorder.start(device_id=self.input_device_id, loop=loop)
+        # Start sounddevice stream in background executor to avoid blocking HTTP loop
+        await loop.run_in_executor(None, lambda: self.recorder.start(device_id=self.input_device_id, loop=loop))
         await self.broadcast("status_change", {
             "status": self.status,
             "is_active": True,
@@ -89,7 +90,8 @@ class ParrotService:
             return
         self.is_active = False
         self.status = "idle"
-        self.recorder.stop()
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, self.recorder.stop)
         audio_player.stop()
         await self.broadcast("status_change", {
             "status": self.status,

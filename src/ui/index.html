@@ -3,9 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Parrot — Tradutor em Tempo Real para Chamadas</title>
+  <title>Parrot — Tradutor em Tempo Real</title>
   <link rel="icon" type="image/png" href="/assets/icon.png" />
-  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -27,24 +26,17 @@
     }
   </script>
   <style>
-    @keyframes pulse-ring {
-      0% { transform: scale(0.95); opacity: 0.8; }
-      50% { transform: scale(1.1); opacity: 0.3; }
-      100% { transform: scale(0.95); opacity: 0.8; }
-    }
-    .pulse-ring {
-      animation: pulse-ring 2s infinite ease-in-out;
-    }
+    /* Custom sleek scrollbars */
     ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
+      width: 5px;
+      height: 5px;
     }
     ::-webkit-scrollbar-track {
       background: #F1F5F9;
     }
     ::-webkit-scrollbar-thumb {
       background: #CBD5E1;
-      border-radius: 4px;
+      border-radius: 3px;
     }
     ::-webkit-scrollbar-thumb:hover {
       background: #94A3B8;
@@ -55,170 +47,188 @@
     .dark ::-webkit-scrollbar-thumb {
       background: #334155;
     }
+
+    /* Spotlight Tour Effect */
+    .spotlight-active {
+      position: relative !important;
+      z-index: 60 !important;
+      box-shadow: 0 0 0 4px #059669, 0 0 0 9999px rgba(15, 23, 42, 0.75) !important;
+      border-radius: 8px !important;
+      transition: all 0.3s ease;
+    }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100 min-h-screen font-sans antialiased flex flex-col transition-colors duration-200 selection:bg-parrot-500 selection:text-white">
 
-  <!-- Top Navigation Bar (macOS Native Style) -->
-  <header class="border-b border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md sticky top-0 z-40 px-6 py-3 flex items-center justify-between shadow-xs">
-    <!-- Brand Logo & Title -->
+  <!-- Top Navigation Bar: Minimalist & Clean -->
+  <header class="border-b border-slate-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md sticky top-0 z-40 px-6 py-3 flex items-center justify-between shadow-xs">
+    <!-- Clean Brand Logo & Title (Sem bolas, sem subtítulos desnecessários) -->
     <div class="flex items-center gap-3">
-      <div class="relative flex items-center justify-center">
-        <div id="logo-ring" class="absolute -inset-1 rounded-full bg-parrot-500/20 blur-sm pulse-ring"></div>
-        <img src="/assets/icon.png" alt="Parrot Logo" class="w-10 h-10 rounded-full object-cover relative ring-2 ring-parrot-500/40 shadow-md shadow-parrot-500/10" />
-      </div>
-      <div>
-        <div class="flex items-center gap-2">
-          <h1 class="font-bold text-lg tracking-tight text-slate-900 dark:text-white flex items-center gap-1.5">
-            Parrot
-            <span class="text-[11px] px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-700/50">App Desktop</span>
-          </h1>
-        </div>
-        <p class="text-xs text-slate-500 dark:text-slate-400">Tradução Simultânea para Google Meet, Zoom, Teams & Discord</p>
-      </div>
+      <img src="/assets/icon.png" alt="Parrot" class="w-8 h-8 rounded-md object-contain shadow-xs" />
+      <h1 class="font-bold text-lg tracking-tight text-slate-900 dark:text-white">Parrot</h1>
     </div>
 
-    <!-- Controls & Status -->
-    <div class="flex items-center gap-2.5">
-      <!-- Status Pill -->
-      <div id="status-badge" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-600 dark:text-slate-300">
-        <span id="status-dot" class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
+    <!-- Right Controls: Status & Single User/Settings Avatar with Dropdown -->
+    <div class="flex items-center gap-3">
+      <!-- Status Badge -->
+      <div id="status-badge" class="flex items-center gap-2 px-3 py-1 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-600 dark:text-slate-300">
+        <span id="status-dot" class="w-2 h-2 rounded-full bg-slate-400"></span>
         <span id="status-text">Inativo</span>
       </div>
 
-      <!-- Engine Selector (OpenAI vs Free) -->
-      <div class="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
-        <button id="btn-engine-openai" onclick="setEngine('openai')" class="cursor-pointer px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 bg-emerald-600 text-white shadow-xs" title="Modelo Mais Novo: GPT-5.4 Mini">
-          <span>⚡ OpenAI</span>
-          <span id="badge-model" class="text-[10px] bg-emerald-700/80 px-1 py-0.2 rounded text-emerald-100 ml-1">GPT-5.4</span>
+      <!-- Quick Tour Help Button -->
+      <button onclick="startTour()" class="cursor-pointer px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-medium border border-slate-200 dark:border-slate-700 transition-colors flex items-center gap-1.5" title="Ver como funciona o sistema">
+        <span>❓ Como Usar</span>
+      </button>
+
+      <!-- User / Settings Dropdown Trigger (A Bolinha com Dropdown) -->
+      <div class="relative" id="user-menu-container">
+        <button id="btn-user-menu" onclick="toggleUserDropdown(event)" class="cursor-pointer w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shadow-xs hover:bg-emerald-500 transition-all ring-2 ring-emerald-600/20 active:scale-95" title="Menu de Configurações e Preferências">
+          <span>DJ</span>
         </button>
-        <button id="btn-engine-free" onclick="setEngine('free')" class="cursor-pointer px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
-          <span>🆓 Gratuito</span>
-        </button>
+
+        <!-- Dropdown Menu -->
+        <div id="user-dropdown" class="hidden absolute right-0 mt-2 w-72 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl py-2 z-50 text-xs">
+          <div class="px-4 py-2 border-b border-slate-100 dark:border-slate-700/60">
+            <div class="font-bold text-slate-900 dark:text-white text-sm">David Junior</div>
+            <div class="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5">
+              <span>IA:</span>
+              <strong id="dd-model-text" class="text-emerald-600 dark:text-emerald-400">GPT-5.4 Mini</strong>
+            </div>
+          </div>
+
+          <!-- Engine Switcher inside Menu -->
+          <div class="px-4 py-2.5 border-b border-slate-100 dark:border-slate-700/60">
+            <div class="font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Motor de Inteligência:</div>
+            <div class="grid grid-cols-2 gap-1.5">
+              <button onclick="setEngine('openai')" id="dd-btn-openai" class="cursor-pointer px-2 py-1.5 rounded-md text-[11px] font-semibold text-center border transition-all bg-emerald-50 dark:bg-emerald-950/50 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300">
+                ⚡ OpenAI (GPT-5.4)
+              </button>
+              <button onclick="setEngine('free')" id="dd-btn-free" class="cursor-pointer px-2 py-1.5 rounded-md text-[11px] font-semibold text-center border transition-all border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700">
+                🆓 Gratuito (Edge)
+              </button>
+            </div>
+          </div>
+
+          <!-- Menu Items -->
+          <div class="py-1">
+            <button onclick="openConfigModal(); closeUserDropdown();" class="cursor-pointer w-full text-left px-4 py-2 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2">
+              <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg>
+              <span>Configurar Idiomas & Áudio</span>
+            </button>
+
+            <button onclick="openHUD(); closeUserDropdown();" class="cursor-pointer w-full text-left px-4 py-2 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2">
+              <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+              <span>Abrir Legendas HUD (Sobrepor Chamada)</span>
+            </button>
+
+            <button onclick="toggleTheme(); closeUserDropdown();" class="cursor-pointer w-full text-left px-4 py-2 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center justify-between">
+              <span class="flex items-center gap-2">
+                <span id="theme-icon">🌙</span>
+                <span>Modo Escuro / Claro</span>
+              </span>
+              <span id="theme-status-text" class="text-[10px] font-mono text-slate-400">Claro</span>
+            </button>
+
+            <button onclick="startTour(); closeUserDropdown();" class="cursor-pointer w-full text-left px-4 py-2 text-emerald-600 dark:text-emerald-400 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 border-t border-slate-100 dark:border-slate-700/60 mt-1 font-semibold">
+              <span>🎯 Tour Guiado (Como Funciona)</span>
+            </button>
+          </div>
+        </div>
       </div>
-
-      <!-- Theme Switcher (Light / Dark) -->
-      <button onclick="toggleTheme()" id="btn-theme-toggle" class="cursor-pointer p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 transition-all shadow-xs" title="Alternar Modo Claro / Escuro">
-        <span id="theme-icon">🌙</span>
-      </button>
-
-      <!-- HUD Floating Button -->
-      <button onclick="openHUD()" title="Abrir janela de legendas flutuantes para sobrepor ao Zoom/Meet" class="cursor-pointer px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 transition-all flex items-center gap-1.5 shadow-xs">
-        <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-        <span>Legendas HUD</span>
-      </button>
-
-      <!-- Settings Button -->
-      <button onclick="openSettingsModal()" class="cursor-pointer p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 transition-all shadow-xs" title="Configurações de Áudio e Modelos">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-      </button>
     </div>
   </header>
 
-  <!-- Main Workspace -->
+  <!-- Main Container -->
   <main class="flex-1 max-w-7xl w-full mx-auto p-6 space-y-5">
 
-    <!-- Top Master Control Card -->
-    <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 shadow-sm flex flex-col md:flex-row items-center justify-between gap-5 relative">
-      <div class="space-y-2 z-10 flex-1">
-        <!-- Audio Devices Badges -->
-        <div class="flex flex-wrap items-center gap-2">
-          <button onclick="openSettingsModal()" class="cursor-pointer inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100 transition-colors" title="Clique para alterar seu microfone físico">
-            🎙️ Microfone Real (Você fala): <strong class="ml-1 text-slate-900 dark:text-white" id="lbl-physical-mic">Microfone Externo</strong>
-          </button>
-          <button onclick="openSettingsModal()" class="cursor-pointer inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60 hover:bg-indigo-100 transition-colors" title="Ponte virtual que envia sua voz traduzida para o Meet/Zoom">
-            🔊 Ponte Virtual Meet/Zoom: <strong class="ml-1 text-slate-900 dark:text-white" id="lbl-virtual-dev">Perssua</strong>
-          </button>
-          <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600">
-            Idioma: <strong class="ml-1 text-slate-900 dark:text-white">Português ⇄ Inglês</strong>
+    <!-- Clean Master Control Card (Sem badges confusas de drivers) -->
+    <div id="card-hero" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-5 shadow-xs flex flex-col md:flex-row items-center justify-between gap-5">
+      <div class="space-y-1.5 flex-1">
+        <div class="flex items-center gap-2">
+          <h2 class="text-xl font-bold text-slate-900 dark:text-white tracking-tight">Tradução em Tempo Real</h2>
+          <span id="badge-lang-preview" class="text-xs px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-800">
+            Português ➔ Inglês
           </span>
         </div>
-        
-        <h2 class="text-xl font-bold text-slate-900 dark:text-white tracking-tight">Tradução Simultânea em Tempo Real</h2>
-        <p class="text-xs text-slate-600 dark:text-slate-300 max-w-2xl leading-relaxed">
-          Fale em português no seu microfone e o Parrot injetará áudio em inglês com voz humana cristalina na sua reunião através do driver <span class="font-semibold text-emerald-600 dark:text-emerald-400">Perssua</span>. O gringo ouve inglês fluente!
+        <p class="text-xs text-slate-500 dark:text-slate-400 max-w-xl">
+          Fale normalmente no seu microfone. O Parrot traduz sua fala em tempo real com voz humana fluente para as pessoas da reunião.
         </p>
+        <div class="pt-1">
+          <button onclick="openConfigModal()" class="cursor-pointer inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 transition-colors">
+            <span>⚙️ Ajustar Idiomas & Microfone</span>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+          </button>
+        </div>
       </div>
 
-      <!-- Live VU Meter & Master Toggle Button -->
-      <div class="flex items-center gap-4 z-10">
-        <!-- Mic Visualizer -->
+      <!-- Right Action & Volume Meter -->
+      <div class="flex items-center gap-4">
+        <!-- Mic Visualizer Bar -->
         <div class="flex flex-col items-center gap-1">
-          <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400">Volume</span>
-          <div class="w-6 h-18 bg-slate-100 dark:bg-slate-900 rounded-lg p-0.5 flex flex-col justify-end border border-slate-200 dark:border-slate-700">
-            <div id="mic-meter-fill" class="w-full bg-emerald-500 rounded transition-all duration-75" style="height: 0%"></div>
+          <span class="text-[9px] uppercase font-bold tracking-wider text-slate-400">Mic</span>
+          <div class="w-5 h-16 bg-slate-100 dark:bg-slate-900 rounded-md p-0.5 flex flex-col justify-end border border-slate-200 dark:border-slate-700">
+            <div id="mic-meter-fill" class="w-full bg-emerald-500 rounded-sm transition-all duration-75" style="height: 0%"></div>
           </div>
-          <span id="mic-meter-val" class="text-[10px] text-slate-500 font-mono">0%</span>
+          <span id="mic-meter-val" class="text-[9px] text-slate-400 font-mono">0%</span>
         </div>
 
-        <!-- Master Start/Stop Button -->
-        <button id="btn-master-toggle" onclick="toggleSession()" class="cursor-pointer group relative px-7 py-3.5 rounded-xl font-bold text-sm transition-all duration-200 shadow-md flex items-center gap-2.5 bg-emerald-600 hover:bg-emerald-500 active:scale-98 text-white shadow-emerald-600/20">
-          <svg id="btn-master-icon" class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        <!-- Master Start/Stop Button (Cantos modernos rounded-lg) -->
+        <button id="btn-master-toggle" onclick="toggleSession()" class="cursor-pointer group relative px-6 py-3.5 rounded-lg font-bold text-sm transition-all duration-150 shadow-sm flex items-center gap-2.5 bg-emerald-600 hover:bg-emerald-500 active:scale-98 text-white shadow-emerald-600/10">
+          <svg id="btn-master-icon" class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
           <span id="btn-master-text">INICIAR TRADUÇÃO</span>
         </button>
       </div>
     </div>
 
-    <!-- Quick Guide Banner -->
-    <div class="bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-900/40 rounded-xl p-3.5 text-xs text-slate-700 dark:text-slate-300 flex items-start gap-3">
-      <div class="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 shrink-0">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-      </div>
-      <div class="space-y-0.5">
-        <p class="font-semibold text-slate-900 dark:text-white">Instrução rápida para Meet / Zoom / Discord:</p>
-        <p>1. No Google Meet ou Zoom, abra as configurações de áudio e coloque o <strong>Microfone</strong> como <span class="text-emerald-700 dark:text-emerald-300 font-bold underline">Perssua</span>.</p>
-        <p>2. Clique em <strong>"INICIAR TRADUÇÃO"</strong> acima. Quando você falar em português, o gringo ouvirá a voz traduzida em inglês!</p>
-      </div>
-    </div>
-
-    <!-- Dual Channels Feeds -->
+    <!-- Dual Channel Panels -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
-      <!-- Column 1: You -> Call (PT -> EN) -->
-      <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl flex flex-col h-[540px] shadow-sm overflow-hidden">
+      <!-- Column 1: You -> Meeting (PT -> EN) -->
+      <div id="col-user" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg flex flex-col h-[520px] shadow-xs overflow-hidden">
         <!-- Channel Header -->
         <div class="p-3.5 border-b border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-850 flex items-center justify-between">
           <div class="flex items-center gap-2">
-            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
             <div>
               <h3 class="font-bold text-sm text-slate-900 dark:text-white">Você ➔ Reunião</h3>
               <p class="text-[11px] text-slate-500 dark:text-slate-400">Você fala em Português ➔ Traduzido em Inglês para a Chamada</p>
             </div>
           </div>
-          <span class="text-xs font-mono px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-800">PT ➔ EN</span>
+          <span class="text-[11px] font-mono px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-800">PT ➔ EN</span>
         </div>
 
         <!-- Mode Bar (VAD vs Push-to-Talk) -->
         <div class="px-4 py-2 bg-slate-50/50 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs">
-          <div class="flex items-center gap-2">
-            <span class="text-slate-500 dark:text-slate-400">Modo:</span>
+          <div class="flex items-center gap-3">
+            <span class="text-slate-500 dark:text-slate-400">Captura:</span>
             <label class="cursor-pointer flex items-center gap-1 text-slate-700 dark:text-slate-200">
               <input type="radio" name="vad_mode" value="vad" checked onchange="changeCaptureMode('vad')" class="text-emerald-600 focus:ring-0">
-              <span>Automático (VAD)</span>
+              <span>Automático (ao falar)</span>
             </label>
-            <label class="cursor-pointer flex items-center gap-1 text-slate-700 dark:text-slate-200 ml-2">
+            <label class="cursor-pointer flex items-center gap-1 text-slate-700 dark:text-slate-200">
               <input type="radio" name="vad_mode" value="ptt" onchange="changeCaptureMode('ptt')" class="text-emerald-600 focus:ring-0">
-              <span>Push-to-Talk (PTT)</span>
+              <span>Push-to-Talk (Espaço)</span>
             </label>
           </div>
-          <button id="btn-ptt" onmousedown="pttPress()" onmouseup="pttRelease()" class="cursor-pointer hidden px-3 py-1 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold rounded-lg text-xs transition-all shadow select-none">
+          <button id="btn-ptt" onmousedown="pttPress()" onmouseup="pttRelease()" class="cursor-pointer hidden px-3 py-1 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold rounded-md text-xs transition-all shadow-xs select-none">
             🎙️ Segure para Falar
           </button>
         </div>
 
-        <!-- Messages Feed (You -> Meeting) -->
+        <!-- Feed User -->
         <div id="feed-user" class="flex-1 p-4 overflow-y-auto space-y-3">
           <div class="text-center py-12 text-slate-400 dark:text-slate-500 text-xs">
-            <svg class="w-9 h-9 mx-auto mb-2 opacity-40 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+            <svg class="w-8 h-8 mx-auto mb-2 opacity-40 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
             Nenhuma fala sua registrada ainda.<br/>Inicie a tradução e fale no microfone ou digite abaixo.
           </div>
         </div>
 
-        <!-- Quick Text-to-Speech Input -->
+        <!-- Quick Speak Input -->
         <div class="p-3 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700">
           <form onsubmit="handleQuickSpeak(event)" class="flex gap-2">
-            <input id="input-quick-speak" type="text" placeholder="Digite em português para falar na chamada..." class="cursor-text flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500 shadow-xs" />
-            <button type="submit" class="cursor-pointer px-4 py-2 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-semibold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-xs">
+            <input id="input-quick-speak" type="text" placeholder="Digite em português para falar na chamada..." class="cursor-text flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md px-3 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500 shadow-xs" />
+            <button type="submit" class="cursor-pointer px-4 py-2 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-semibold rounded-md text-xs flex items-center gap-1.5 transition-all shadow-xs">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
               <span>Falar</span>
             </button>
@@ -226,37 +236,37 @@
         </div>
       </div>
 
-      <!-- Column 2: Call -> You (EN -> PT) -->
-      <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl flex flex-col h-[540px] shadow-sm overflow-hidden">
+      <!-- Column 2: Meeting -> You (EN -> PT) -->
+      <div id="col-meeting" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg flex flex-col h-[520px] shadow-xs overflow-hidden">
         <!-- Channel Header -->
         <div class="p-3.5 border-b border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-850 flex items-center justify-between">
           <div class="flex items-center gap-2">
-            <span class="w-2.5 h-2.5 rounded-full bg-sky-500"></span>
+            <span class="w-2 h-2 rounded-full bg-sky-500"></span>
             <div>
               <h3 class="font-bold text-sm text-slate-900 dark:text-white">Reunião ➔ Você</h3>
               <p class="text-[11px] text-slate-500 dark:text-slate-400">Participantes falam em Inglês ➔ Traduzido para Você em Português</p>
             </div>
           </div>
-          <span class="text-xs font-mono px-2 py-0.5 rounded bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 font-semibold border border-sky-200 dark:border-sky-800">EN ➔ PT</span>
+          <span class="text-[11px] font-mono px-2 py-0.5 rounded-md bg-sky-50 dark:bg-sky-950 text-sky-700 dark:text-sky-300 font-semibold border border-sky-200 dark:border-sky-800">EN ➔ PT</span>
         </div>
 
         <!-- Simulation Bar -->
         <div class="px-4 py-2 bg-slate-50/50 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs">
-          <span class="text-slate-500 dark:text-slate-400">Simular gringo falando em inglês:</span>
+          <span class="text-slate-500 dark:text-slate-400">Testar com fala estrangeira:</span>
           <div class="flex items-center gap-1.5">
-            <button onclick="simulateSpeech('Hi David, could you give us an update on the roadmap?')" class="cursor-pointer px-2.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-[11px] transition-all">
+            <button onclick="simulateSpeech('Hi David, could you give us an update on the roadmap?')" class="cursor-pointer px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-[11px] transition-all">
               "Roadmap..."
             </button>
-            <button onclick="simulateSpeech('Sounds great, we are ready to move forward with this.')" class="cursor-pointer px-2.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-[11px] transition-all">
+            <button onclick="simulateSpeech('Sounds great, we are ready to move forward with this.')" class="cursor-pointer px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-[11px] transition-all">
               "Sounds great..."
             </button>
           </div>
         </div>
 
-        <!-- Messages Feed (Meeting -> You) -->
+        <!-- Feed Meeting -->
         <div id="feed-meeting" class="flex-1 p-4 overflow-y-auto space-y-3">
           <div class="text-center py-12 text-slate-400 dark:text-slate-500 text-xs">
-            <svg class="w-9 h-9 mx-auto mb-2 opacity-40 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+            <svg class="w-8 h-8 mx-auto mb-2 opacity-40 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
             Nenhuma fala da reunião recebida ainda.<br/>Use os botões de simulação acima para testar a tradução.
           </div>
         </div>
@@ -264,9 +274,9 @@
         <!-- Custom English Test Input -->
         <div class="p-3 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700">
           <form onsubmit="handleSimulateCustom(event)" class="flex gap-2">
-            <input id="input-simulate-en" type="text" placeholder="Digite uma frase em inglês para simular o participante estrangeiro..." class="cursor-text flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-sky-500 shadow-xs" />
-            <button type="submit" class="cursor-pointer px-4 py-2 bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white font-semibold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-xs">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <input id="input-simulate-en" type="text" placeholder="Digite uma frase em inglês para simular o gringo..." class="cursor-text flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md px-3 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-sky-500 shadow-xs" />
+            <button type="submit" class="cursor-pointer px-4 py-2 bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white font-semibold rounded-md text-xs flex items-center gap-1.5 transition-all shadow-xs">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path></svg>
               <span>Testar</span>
             </button>
           </form>
@@ -275,111 +285,149 @@
     </div>
   </main>
 
-  <!-- Settings Modal -->
-  <div id="modal-settings" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
-      <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-4">
-        <div class="flex items-center gap-2">
-          <div class="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg>
-          </div>
-          <h3 class="font-bold text-lg text-slate-900 dark:text-white">Configurações do Parrot</h3>
+  <!-- Clean Configuration Dialog: "Configurar Idiomas & Áudio" (Focado na Experiência Humana) -->
+  <div id="modal-config" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg max-w-lg w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-3">
+        <div>
+          <h3 class="font-bold text-base text-slate-900 dark:text-white">Configurar Idiomas & Áudio</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Defina o que você fala, como a chamada ouve e o microfone.</p>
         </div>
-        <button onclick="closeSettingsModal()" class="cursor-pointer p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700">
+        <button onclick="closeConfigModal()" class="cursor-pointer p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
       </div>
 
-      <!-- Settings Fields -->
       <div class="space-y-4 text-xs">
-        <!-- OpenAI Model Selection -->
-        <div class="bg-emerald-50/60 dark:bg-emerald-950/20 p-3 rounded-xl border border-emerald-200 dark:border-emerald-800">
-          <label class="block font-bold text-emerald-800 dark:text-emerald-300 mb-1">Modelo de IA da OpenAI:</label>
-          <select id="sel-openai-model" class="cursor-pointer w-full bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-700 rounded-lg p-2 font-medium text-slate-800 dark:text-white focus:outline-none focus:border-emerald-500">
-            <option value="gpt-5.4-mini">GPT-5.4 Mini (Mais Novo / Ultra Rápido & Fluente — Recomendado)</option>
-            <option value="gpt-5.4">GPT-5.4 (Mais Avançado / Máximo Raciocínio)</option>
-            <option value="gpt-5-mini">GPT-5 Mini</option>
-            <option value="gpt-4.1-mini">GPT-4.1 Mini</option>
-          </select>
-          <p class="text-[10px] text-emerald-600 dark:text-emerald-400 mt-1">Conectado diretamente à sua conta com os modelos mais recentes de 2026.</p>
-        </div>
-
-        <!-- Input Mic -->
-        <div>
-          <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Seu Microfone Físico (Entrada onde você fala):</label>
-          <select id="sel-input-mic" class="cursor-pointer w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-slate-800 dark:text-white focus:outline-none focus:border-emerald-500"></select>
-        </div>
-
-        <!-- Virtual Mic (Perssua) -->
-        <div>
-          <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Microfone Virtual da Reunião (Driver Perssua / BlackHole):</label>
-          <select id="sel-virtual-mic" class="cursor-pointer w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-slate-800 dark:text-white focus:outline-none focus:border-emerald-500"></select>
-          <p class="text-[11px] text-slate-500 mt-1">Este é o dispositivo que você seleciona como microfone no Google Meet ou Zoom.</p>
-        </div>
-
-        <!-- Headphones -->
-        <div>
-          <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Seus Fones de Ouvido (Saída para ouvir):</label>
-          <select id="sel-headphones" class="cursor-pointer w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-slate-800 dark:text-white focus:outline-none focus:border-emerald-500"></select>
-        </div>
-
-        <!-- OpenAI Key -->
-        <div>
-          <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5">OpenAI API Key:</label>
-          <div class="flex gap-2">
-            <input id="input-openai-key" type="password" class="cursor-text flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-slate-800 dark:text-white font-mono text-[11px] focus:outline-none focus:border-emerald-500" />
-            <button onclick="toggleKeyVisibility()" class="cursor-pointer px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 rounded-xl text-slate-600 dark:text-slate-300">👁️</button>
+        <!-- 1. O que você fala e o que a chamada ouve -->
+        <div class="bg-slate-50 dark:bg-slate-900 p-3.5 rounded-lg border border-slate-200 dark:border-slate-700 space-y-3">
+          <div class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span>Sua Fala na Reunião (Você ➔ Chamada)</span>
           </div>
-        </div>
 
-        <!-- Voices -->
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Voz OpenAI (Inglês):</label>
-            <select id="sel-openai-voice" class="cursor-pointer w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-2 text-slate-800 dark:text-white focus:outline-none focus:border-emerald-500">
-              <option value="alloy">Alloy (Neutro/Moderno)</option>
-              <option value="echo">Echo (Masculino Natural)</option>
-              <option value="fable">Fable (Expressivo)</option>
-              <option value="onyx">Onyx (Masculino Grave)</option>
-              <option value="nova">Nova (Feminino Confiante)</option>
-              <option value="shimmer">Shimmer (Feminino Claro)</option>
-            </select>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block font-medium text-slate-600 dark:text-slate-400 mb-1">Idioma que você fala:</label>
+              <select id="sel-source-lang" class="cursor-pointer w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md p-2 text-slate-900 dark:text-white font-medium focus:outline-none focus:border-emerald-500">
+                <option value="pt">Português (Brasil)</option>
+                <option value="en">Inglês</option>
+                <option value="es">Espanhol</option>
+                <option value="fr">Francês</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-medium text-slate-600 dark:text-slate-400 mb-1">Idioma que a chamada ouve:</label>
+              <select id="sel-target-lang" class="cursor-pointer w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md p-2 text-slate-900 dark:text-white font-medium focus:outline-none focus:border-emerald-500">
+                <option value="en">Inglês (Fluente Natural)</option>
+                <option value="pt">Português</option>
+                <option value="es">Espanhol</option>
+                <option value="fr">Francês</option>
+              </select>
+            </div>
           </div>
+
           <div>
-            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Voz Gratuita (Edge-TTS):</label>
-            <select id="sel-edge-voice" class="cursor-pointer w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-2 text-slate-800 dark:text-white focus:outline-none focus:border-emerald-500">
-              <option value="en-US-ChristopherNeural">Christopher (Natural Male)</option>
-              <option value="en-US-JennyNeural">Jenny (Natural Female)</option>
-              <option value="en-US-GuyNeural">Guy (Professional Male)</option>
-              <option value="en-US-AriaNeural">Aria (Friendly Female)</option>
+            <label class="block font-medium text-slate-600 dark:text-slate-400 mb-1">Voz sintetizada falada na chamada:</label>
+            <select id="sel-call-voice" class="cursor-pointer w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md p-2 text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500">
+              <option value="alloy">Alloy (Voz Moderna e Fluente)</option>
+              <option value="echo">Echo (Voz Masculina Natural)</option>
+              <option value="nova">Nova (Voz Feminina Natural)</option>
+              <option value="onyx">Onyx (Voz Grave Masculina)</option>
+              <option value="fable">Fable (Voz Expressiva)</option>
+              <option value="shimmer">Shimmer (Voz Clara Feminina)</option>
             </select>
           </div>
         </div>
 
-        <!-- Silence slider -->
-        <div>
-          <div class="flex justify-between font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-            <span>Tempo de Silêncio para Traduzir:</span>
-            <span id="lbl-silence-val" class="text-emerald-600 dark:text-emerald-400 font-mono">650ms</span>
+        <!-- 2. Onde você fala (Seu microfone) -->
+        <div class="bg-slate-50 dark:bg-slate-900 p-3.5 rounded-lg border border-slate-200 dark:border-slate-700 space-y-2">
+          <div class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-sky-500"></span>
+            <span>Seu Microfone Físico (Entrada)</span>
           </div>
-          <input id="range-silence" type="range" min="300" max="1500" step="50" value="650" oninput="document.getElementById('lbl-silence-val').textContent = this.value + 'ms'" class="cursor-pointer w-full accent-emerald-500">
+          <div>
+            <label class="block font-medium text-slate-600 dark:text-slate-400 mb-1">Dispositivo onde você fala:</label>
+            <select id="sel-input-mic" class="cursor-pointer w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md p-2 text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"></select>
+          </div>
         </div>
 
-        <!-- Audio Tests -->
-        <div class="pt-2 border-t border-slate-200 dark:border-slate-700 flex gap-3">
-          <button onclick="testAudioDevice('perssua')" class="cursor-pointer flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-semibold border border-slate-200 dark:border-slate-700 transition-all flex items-center justify-center gap-1.5 shadow-xs">
-            <span>🔊 Testar Som no Perssua</span>
-          </button>
-          <button onclick="testAudioDevice('headphones')" class="cursor-pointer flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-semibold border border-slate-200 dark:border-slate-700 transition-all flex items-center justify-center gap-1.5 shadow-xs">
-            <span>🎧 Testar Som nos Fones</span>
+        <!-- 3. Modelo de IA da OpenAI -->
+        <div class="bg-slate-50 dark:bg-slate-900 p-3.5 rounded-lg border border-slate-200 dark:border-slate-700 space-y-2">
+          <div class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+            <span>Inteligência Artificial (OpenAI)</span>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block font-medium text-slate-600 dark:text-slate-400 mb-1">Modelo de Tradução:</label>
+              <select id="sel-openai-model" class="cursor-pointer w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md p-2 text-slate-900 dark:text-white font-medium focus:outline-none focus:border-emerald-500">
+                <option value="gpt-5.4-mini">GPT-5.4 Mini (Mais Novo / Ultra Rápido)</option>
+                <option value="gpt-5.4">GPT-5.4 (Máximo Raciocínio)</option>
+                <option value="gpt-5-mini">GPT-5 Mini</option>
+                <option value="gpt-4.1-mini">GPT-4.1 Mini</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-medium text-slate-600 dark:text-slate-400 mb-1">Pausa para traduzir:</label>
+              <select id="sel-silence-pause" class="cursor-pointer w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md p-2 text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500">
+                <option value="500">500ms (Muito Rápido)</option>
+                <option value="650" selected>650ms (Equilibrado)</option>
+                <option value="900">900ms (Pausado)</option>
+                <option value="1200">1200ms (Frases Longas)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Teste de Som -->
+        <div class="pt-1 flex gap-2">
+          <button onclick="testAudioOutput()" class="cursor-pointer flex-1 py-2 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold border border-slate-200 dark:border-slate-600 transition-colors flex items-center justify-center gap-1.5 shadow-xs">
+            <span>🔊 Testar Som da Voz na Reunião</span>
           </button>
         </div>
       </div>
 
       <!-- Modal Footer -->
-      <div class="flex justify-end gap-2.5 pt-4 border-t border-slate-200 dark:border-slate-700">
-        <button onclick="closeSettingsModal()" class="cursor-pointer px-4 py-2 rounded-xl text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800">Cancelar</button>
-        <button onclick="saveSettingsForm()" class="cursor-pointer px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-bold text-white shadow-md">Salvar Configurações</button>
+      <div class="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-700">
+        <button onclick="closeConfigModal()" class="cursor-pointer px-4 py-2 rounded-md text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">Cancelar</button>
+        <button onclick="saveConfigModal()" class="cursor-pointer px-5 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 font-bold text-white shadow-xs">Salvar Configurações</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Interactive Spotlight Onboarding Tour Overlay -->
+  <div id="tour-overlay" class="hidden fixed inset-0 z-50 pointer-events-auto">
+    <!-- Semi-transparent backdrop -->
+    <div class="absolute inset-0 bg-slate-950/75 backdrop-blur-xs transition-opacity duration-300"></div>
+
+    <!-- Spotlight Floating Balloon Card -->
+    <div id="tour-balloon" class="absolute z-60 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-5 shadow-2xl max-w-sm w-full text-xs space-y-3 transition-all duration-300">
+      <div class="flex items-center justify-between">
+        <span id="tour-step-badge" class="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold font-mono text-[10px] border border-emerald-200 dark:border-emerald-800">
+          Passo 1 de 4
+        </span>
+        <button onclick="skipTour()" class="cursor-pointer text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-[11px]">
+          Pular
+        </button>
+      </div>
+
+      <div class="space-y-1">
+        <h4 id="tour-title" class="font-bold text-sm text-slate-900 dark:text-white">Ligar Tradução</h4>
+        <p id="tour-desc" class="text-slate-600 dark:text-slate-300 leading-relaxed text-xs">
+          Clique neste botão para iniciar. Quando você falar no seu microfone, o Parrot traduz instantaneamente.
+        </p>
+      </div>
+
+      <div class="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-700/60">
+        <button id="tour-btn-prev" onclick="prevTourStep()" class="cursor-pointer px-3 py-1.5 rounded-md text-slate-500 hover:text-slate-800 dark:hover:text-white text-xs hidden">
+          Anterior
+        </button>
+        <div class="ml-auto flex items-center gap-2">
+          <button id="tour-btn-next" onclick="nextTourStep()" class="cursor-pointer px-4 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs">
+            Próximo ➔
+          </button>
+        </div>
       </div>
     </div>
   </div>
