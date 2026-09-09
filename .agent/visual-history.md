@@ -1,6 +1,6 @@
 # Histórico Visual do Projeto — Parrot
 
-> Use os identificadores para restaurar qualquer versão: `Cores - C - v1`, `Tipografia - T - v1`, etc.
+> Use os identificadores para restaurar qualquer versão: `Cores - C - v1`, `Tipografia - T - v1`, `Componentes - K - v2`, etc.
 
 ---
 
@@ -48,7 +48,7 @@
 
 ---
 
-## Tema Completo - TC - v1
+## Componentes - K - v2
 
 **Data:** 2026-09-09  
-**Motivo:** Setup inicial da interface desktop Parrot com tema Dark Mode refinado e transparências sutis
+**Motivo:** Atualização do ícone oficial para silhueta 3D verde minimalista virada para a direita (estilo minimalista Reserva / macOS squircle app icon)

@@ -112,11 +112,14 @@
     <!-- Quick Call Banner / Master Control -->
     <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border border-cardborder rounded-2xl p-6 shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
       <div class="space-y-1.5 z-10">
-        <div class="flex items-center gap-2">
-          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-            Microfone da Chamada: <strong class="ml-1 text-white" id="lbl-virtual-dev">Perssua</strong>
-          </span>
-          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20">
+        <div class="flex flex-wrap items-center gap-2">
+          <button onclick="openSettingsModal()" class="cursor-pointer inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25 transition-colors" title="Clique para trocar o microfone onde você fala">
+            🎙️ Seu Microfone Real: <strong class="ml-1 text-white" id="lbl-physical-mic">Detectando...</strong>
+          </button>
+          <button onclick="openSettingsModal()" class="cursor-pointer inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-500/25 transition-colors" title="Driver virtual que envia a voz traduzida para o Meet/Zoom">
+            🔊 Ponte Virtual Meet/Zoom: <strong class="ml-1 text-white" id="lbl-virtual-dev">Perssua</strong>
+          </button>
+          <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20">
             Par: <strong class="ml-1 text-white">Português ⇄ Inglês</strong>
           </span>
         </div>

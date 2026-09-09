@@ -293,11 +293,16 @@ function populateDevices(devices, setts) {
   const selPhones = document.getElementById('sel-headphones');
 
   selMic.innerHTML = '';
+  const chosenMicId = setts.input_device_id ?? devices.recommended.mic_id;
   devices.inputs.forEach(d => {
     const opt = document.createElement('option');
     opt.value = d.id;
     opt.textContent = `${d.name} (${d.sample_rate}Hz)`;
-    if (d.id === (setts.input_device_id ?? devices.recommended.mic_id)) opt.selected = true;
+    if (d.id === chosenMicId) {
+      opt.selected = true;
+      const lblMic = document.getElementById('lbl-physical-mic');
+      if (lblMic) lblMic.textContent = d.name;
+    }
     selMic.appendChild(opt);
   });
 
