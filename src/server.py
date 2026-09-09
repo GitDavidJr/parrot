@@ -46,6 +46,12 @@ async def get_index():
     index_file = UI_DIR / "index.html"
     return HTMLResponse(content=index_file.read_text(encoding="utf-8"))
 
+@app.get("/app.js")
+@app.get("/src/ui/app.js")
+async def get_app_js():
+    js_file = UI_DIR / "app.js"
+    return FileResponse(js_file, media_type="application/javascript")
+
 @app.get("/hud", response_class=HTMLResponse)
 async def get_hud():
     hud_file = UI_DIR / "hud.html"
