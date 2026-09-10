@@ -23,12 +23,16 @@ class Settings(BaseModel):
     input_device_id: int | None = None
     virtual_output_device_id: int | None = None # Perssua
     headphones_device_id: int | None = None
+    meeting_device_id: int | None = None # Device capturing incoming call audio (Perssua / Loopback)
     
     # VAD & Capture
-    vad_silence_threshold_ms: int = int(os.getenv("VAD_SILENCE_THRESHOLD_MS", "650"))
+    vad_silence_threshold_ms: int = int(os.getenv("VAD_SILENCE_THRESHOLD_MS", "350"))
     vad_energy_threshold: float = float(os.getenv("VAD_ENERGY_THRESHOLD", "0.015"))
     capture_mode: str = "vad" # "vad" or "ptt" (push-to-talk)
     
+    # Test Monitor (Ouvir a tradução nos próprios fones)
+    play_translated_to_headphones: bool = os.getenv("PLAY_TRANSLATED_TO_HEADPHONES", "true").lower() == "true"
+
     # Volume levels
     virtual_mic_volume: float = 1.0
     headphones_volume: float = 0.9
@@ -49,6 +53,7 @@ def save_settings():
         f"EDGE_VOICE_PT={settings.edge_voice_pt}\n",
         f"VAD_SILENCE_THRESHOLD_MS={settings.vad_silence_threshold_ms}\n",
         f"VAD_ENERGY_THRESHOLD={settings.vad_energy_threshold}\n",
+        f"PLAY_TRANSLATED_TO_HEADPHONES={'true' if settings.play_translated_to_headphones else 'false'}\n",
     ]
     with open(ENV_PATH, "w") as f:
         f.writelines(lines)

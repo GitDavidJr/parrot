@@ -20,6 +20,8 @@ def get_audio_devices() -> Dict[str, Any]:
     best_mic_id = None
     best_headphone_id = None
 
+    meeting_devices: List[Dict[str, Any]] = []
+
     for i, dev in enumerate(devices):
         name = dev["name"]
         in_ch = dev["max_input_channels"]
@@ -41,12 +43,14 @@ def get_audio_devices() -> Dict[str, Any]:
             if perssua_id is None:
                 perssua_id = i
 
-        if in_ch > 0 and not is_perssua:
-            input_devices.append(item)
-            # Prefer external mic or default mic
-            if "externo" in name.lower() or i == default_in:
-                if best_mic_id is None or "externo" in name.lower():
-                    best_mic_id = i
+        if in_ch > 0:
+            meeting_devices.append(item)
+            if not is_perssua:
+                input_devices.append(item)
+                # Prefer external mic or default mic
+                if "externo" in name.lower() or i == default_in:
+                    if best_mic_id is None or "externo" in name.lower():
+                        best_mic_id = i
 
         if out_ch > 0 and not is_perssua:
             output_devices.append(item)
@@ -66,11 +70,13 @@ def get_audio_devices() -> Dict[str, Any]:
 
     return {
         "inputs": input_devices,
+        "meeting_inputs": meeting_devices,
         "virtual_outputs": virtual_devices,
         "outputs": output_devices,
         "recommended": {
             "mic_id": best_mic_id,
             "virtual_mic_id": perssua_id,
+            "meeting_device_id": perssua_id or best_mic_id,
             "headphones_id": best_headphone_id,
         },
     }

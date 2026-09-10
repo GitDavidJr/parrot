@@ -21,6 +21,7 @@ class ParrotService:
             default_voice_pt=settings.edge_voice_pt
         )
 
+        # 1. User Microphone Recorder (PT -> EN)
         self.recorder = AudioRecorder(
             energy_threshold=settings.vad_energy_threshold,
             silence_threshold_ms=settings.vad_silence_threshold_ms
@@ -28,7 +29,16 @@ class ParrotService:
         self.recorder.on_speech_segment = self._handle_speech_segment
         self.recorder.on_level_update = self._handle_level_update
 
+        # 2. Meeting Audio Recorder (EN -> PT: Captures Discord / Meet / Zoom)
+        self.meeting_recorder = AudioRecorder(
+            energy_threshold=settings.vad_energy_threshold,
+            silence_threshold_ms=settings.vad_silence_threshold_ms
+        )
+        self.meeting_recorder.on_speech_segment = self._handle_meeting_speech_segment
+        self.meeting_recorder.on_level_update = self._handle_meeting_level_update
+
         self.is_active = False
+        self.is_transmitting_to_call = False
         self.status = "idle"  # idle, listening, transcribing, translating, speaking
         self.clients: List[Any] = []  # WebSocket connections
         self.history: List[Dict[str, Any]] = []
@@ -38,6 +48,7 @@ class ParrotService:
         self.input_device_id = settings.input_device_id or self.device_info["recommended"]["mic_id"]
         self.virtual_output_device_id = settings.virtual_output_device_id or self.device_info["recommended"]["virtual_mic_id"]
         self.headphones_device_id = settings.headphones_device_id or self.device_info["recommended"]["headphones_id"]
+        self.meeting_device_id = settings.meeting_device_id or self.device_info["recommended"].get("meeting_device_id", self.virtual_output_device_id)
 
     @property
     def current_engine(self):
@@ -56,7 +67,7 @@ class ParrotService:
                     self.clients.remove(ws)
 
     def _handle_level_update(self, level: float, is_speaking: bool):
-        """Called 20 times per second with microphone level."""
+        """Called with user microphone level."""
         if not self.is_active:
             return
         asyncio.create_task(self.broadcast("audio_level", {
@@ -65,23 +76,47 @@ class ParrotService:
             "status": self.status
         }))
 
+    def _handle_meeting_level_update(self, level: float, is_speaking: bool):
+        """Called with meeting audio level (when foreign participants speak)."""
+        if not self.is_active:
+            return
+        asyncio.create_task(self.broadcast("meeting_audio_level", {
+            "level": level,
+            "is_speaking": is_speaking
+        }))
+
     def _handle_speech_segment(self, audio_bytes: bytes, duration: float):
         """Called when a user speech segment has finished recording."""
         asyncio.create_task(self.process_user_speech(audio_bytes, duration))
 
+    def _handle_meeting_speech_segment(self, audio_bytes: bytes, duration: float):
+        """Called when a participant speech segment from Discord/Meet/Zoom has finished."""
+        if self.is_transmitting_to_call:
+            return
+        asyncio.create_task(self.process_live_meeting_audio(audio_bytes, duration))
+
     async def start_session(self):
-        """Starts listening to microphone and begins translation loop."""
+        """Starts listening to microphone and meeting audio."""
         if self.is_active:
             return
         self.is_active = True
         self.status = "listening"
         loop = asyncio.get_event_loop()
-        # Start sounddevice stream in background executor to avoid blocking HTTP loop
+
+        # Start user microphone
         await loop.run_in_executor(None, lambda: self.recorder.start(device_id=self.input_device_id, loop=loop))
+
+        # Start meeting audio capture stream (Discord / Zoom / Meet audio)
+        if self.meeting_device_id is not None:
+            try:
+                await loop.run_in_executor(None, lambda: self.meeting_recorder.start(device_id=self.meeting_device_id, loop=loop))
+            except Exception as e:
+                print(f"[ParrotService] Erro ao iniciar meeting_recorder no dispositivo {self.meeting_device_id}: {e}")
+
         await self.broadcast("status_change", {
             "status": self.status,
             "is_active": True,
-            "message": "Parrot está ouvindo seu microfone..."
+            "message": "Parrot ativo: ouvindo seu microfone e a reunião..."
         })
 
     async def stop_session(self):
@@ -92,6 +127,7 @@ class ParrotService:
         self.status = "idle"
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, self.recorder.stop)
+        await loop.run_in_executor(None, self.meeting_recorder.stop)
         audio_player.stop()
         await self.broadcast("status_change", {
             "status": self.status,
@@ -191,22 +227,51 @@ class ParrotService:
         self.history.append(entry)
         await self.broadcast("new_message", entry)
 
-        # 4. Play audio to Virtual Microphone (Perssua)
+        # 4. Play audio to Virtual Microphone (Perssua) AND Headphones (if Test Monitor active)
+        playback_tasks = []
         if self.virtual_output_device_id is not None and audio_out:
-            try:
-                await audio_player.play_audio_to_device(
+            playback_tasks.append(
+                audio_player.play_audio_to_device(
                     audio_out,
                     device_id=self.virtual_output_device_id,
                     volume=settings.virtual_mic_volume
                 )
+            )
+
+        if getattr(settings, 'play_translated_to_headphones', False) and self.headphones_device_id is not None and audio_out:
+            playback_tasks.append(
+                audio_player.play_audio_to_device(
+                    audio_out,
+                    device_id=self.headphones_device_id,
+                    volume=settings.headphones_volume
+                )
+            )
+
+        if playback_tasks:
+            try:
+                await asyncio.gather(*playback_tasks)
             except Exception as e:
-                print(f"[ParrotService] Erro ao reproduzir para Perssua: {e}")
+                print(f"[ParrotService] Erro na reprodução de áudio: {e}")
 
         self.status = "listening" if self.is_active else "idle"
         await self.broadcast("status_change", {
             "status": self.status,
             "message": "Pronto para a próxima fala."
         })
+
+    async def preview_voice(self, voice: str, text: Optional[str] = None):
+        """Synthesizes a short test phrase and plays it directly through the user's headphones."""
+        phrase = text or f"Hello! This is how the {voice} voice sounds in your meetings."
+        engine = self.current_engine
+        audio_out = await engine.synthesize(phrase, lang="en", voice=voice)
+        target_device = self.headphones_device_id or self.virtual_output_device_id
+        if target_device is not None and audio_out:
+            await audio_player.play_audio_to_device(
+                audio_out,
+                device_id=target_device,
+                volume=settings.headphones_volume
+            )
+        return audio_out
 
     async def quick_speak_text(self, text_pt: str):
         """Translates written Portuguese text and speaks English into the call."""
@@ -240,12 +305,28 @@ class ParrotService:
         self.history.append(entry)
         await self.broadcast("new_message", entry)
 
+        playback_tasks = []
         if self.virtual_output_device_id is not None and audio_out:
-            await audio_player.play_audio_to_device(
-                audio_out,
-                device_id=self.virtual_output_device_id,
-                volume=settings.virtual_mic_volume
+            playback_tasks.append(
+                audio_player.play_audio_to_device(
+                    audio_out,
+                    device_id=self.virtual_output_device_id,
+                    volume=settings.virtual_mic_volume
+                )
             )
+        if getattr(settings, 'play_translated_to_headphones', False) and self.headphones_device_id is not None and audio_out:
+            playback_tasks.append(
+                audio_player.play_audio_to_device(
+                    audio_out,
+                    device_id=self.headphones_device_id,
+                    volume=settings.headphones_volume
+                )
+            )
+        if playback_tasks:
+            try:
+                await asyncio.gather(*playback_tasks)
+            except Exception as e:
+                print(f"[ParrotService] Erro na reprodução de áudio: {e}")
 
         self.status = "listening" if self.is_active else "idle"
         await self.broadcast("status_change", {"status": self.status, "message": "Pronto."})
@@ -292,6 +373,70 @@ class ParrotService:
             except Exception as e:
                 print(f"[ParrotService] Erro ao falar nos fones: {e}")
 
+    async def process_live_meeting_audio(self, audio_bytes: bytes, duration: float):
+        """
+        Meeting (EN) -> User (PT):
+        Transcribes live incoming English speech captured from Discord/Meet/Zoom,
+        translates to Portuguese, broadcasts live subtitles to HUD & feed,
+        and speaks Portuguese into user headphones.
+        """
+        if self.is_transmitting_to_call:
+            return
+
+        t0 = time.time()
+        msg_id = str(uuid.uuid4())[:8]
+        engine = self.current_engine
+
+        # 1. Transcribing Meeting Speech (EN)
+        try:
+            en_text = await engine.transcribe(audio_bytes, lang=settings.target_lang)
+        except Exception as e:
+            print(f"[ParrotService] Erro na transcrição da reunião: {e}")
+            return
+
+        if not en_text or len(en_text.strip()) == 0:
+            return
+
+        # 2. Translating EN -> PT
+        try:
+            pt_text = await engine.translate(
+                en_text,
+                source_lang=settings.target_lang,
+                target_lang=settings.source_lang
+            )
+        except Exception as e:
+            print(f"[ParrotService] Erro na tradução da reunião: {e}")
+            return
+
+        latency = round((time.time() - t0) * 1000)
+        entry = {
+            "id": msg_id,
+            "channel": "meeting_to_user",
+            "source_lang": settings.target_lang,
+            "target_lang": settings.source_lang,
+            "original": en_text,
+            "translated": pt_text,
+            "latency_ms": latency,
+            "timestamp": time.strftime("%H:%M:%S"),
+            "engine": settings.engine
+        }
+        self.history.append(entry)
+        await self.broadcast("new_message", entry)
+
+        # 3. Speak Portuguese into user headphones
+        if self.headphones_device_id is not None:
+            try:
+                voice = "alloy" if settings.engine == "openai" else settings.edge_voice_pt
+                audio_out = await engine.synthesize(pt_text, lang=settings.source_lang, voice=voice)
+                if audio_out:
+                    asyncio.create_task(audio_player.play_audio_to_device(
+                        audio_out,
+                        device_id=self.headphones_device_id,
+                        volume=settings.headphones_volume
+                    ))
+            except Exception as e:
+                print(f"[ParrotService] Erro ao sintetizar nos fones: {e}")
+
     def update_settings(self, new_settings: Dict[str, Any]):
         """Updates runtime settings and persists to .env."""
         if "openai_api_key" in new_settings:
@@ -302,6 +447,9 @@ class ParrotService:
         if "input_device_id" in new_settings:
             self.input_device_id = new_settings["input_device_id"]
             settings.input_device_id = self.input_device_id
+        if "meeting_device_id" in new_settings:
+            self.meeting_device_id = new_settings["meeting_device_id"]
+            settings.meeting_device_id = self.meeting_device_id
         if "virtual_output_device_id" in new_settings:
             self.virtual_output_device_id = new_settings["virtual_output_device_id"]
             settings.virtual_output_device_id = self.virtual_output_device_id
@@ -317,14 +465,18 @@ class ParrotService:
         if "vad_silence_threshold_ms" in new_settings:
             settings.vad_silence_threshold_ms = int(new_settings["vad_silence_threshold_ms"])
             self.recorder.silence_threshold_ms = settings.vad_silence_threshold_ms
+            self.meeting_recorder.silence_threshold_ms = settings.vad_silence_threshold_ms
         if "vad_energy_threshold" in new_settings:
             settings.vad_energy_threshold = float(new_settings["vad_energy_threshold"])
             self.recorder.energy_threshold = settings.vad_energy_threshold
+            self.meeting_recorder.energy_threshold = settings.vad_energy_threshold
         if "openai_model" in new_settings:
             settings.openai_model = new_settings["openai_model"]
             self.openai_engine.update_model(settings.openai_model)
         if "theme" in new_settings:
             settings.theme = new_settings["theme"]
+        if "play_translated_to_headphones" in new_settings:
+            settings.play_translated_to_headphones = bool(new_settings["play_translated_to_headphones"])
         if "capture_mode" in new_settings:
             settings.capture_mode = new_settings["capture_mode"]
 

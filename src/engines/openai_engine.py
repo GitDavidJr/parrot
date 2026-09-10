@@ -75,8 +75,8 @@ class OpenAIEngine(BaseTranslationEngine):
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": text}
             ],
-            temperature=0.2,
-            max_completion_tokens=250
+            temperature=0.1,
+            max_completion_tokens=150
         )
         return completion.choices[0].message.content.strip()
 
@@ -87,12 +87,39 @@ class OpenAIEngine(BaseTranslationEngine):
             raise ValueError("OpenAI API Key não configurada.")
 
         use_voice = voice or self.default_voice or "alloy"
-        # Voices available: alloy, echo, fable, onyx, nova, shimmer
-        response = await self.client.audio.speech.create(
-            model="tts-1",
-            voice=use_voice,
-            response_format="wav",
-            input=text
-        )
-        # response is an HttpxBinaryResponseContent
-        return response.content
+        # OpenAI TTS with raw PCM (fastest delivery, saves ~500ms server encoding)
+        import struct
+        try:
+            response = await self.client.audio.speech.create(
+                model="tts-1",
+                voice=use_voice,
+                response_format="pcm",
+                input=text
+            )
+            raw_pcm = response.content
+            data_size = len(raw_pcm)
+            header = struct.pack(
+                '<4sI4s4sIHHIIHH4sI',
+                b'RIFF',
+                data_size + 36,
+                b'WAVE',
+                b'fmt ',
+                16,
+                1,
+                1,
+                24000,
+                48000,
+                2,
+                16,
+                b'data',
+                data_size
+            )
+            return header + raw_pcm
+        except Exception:
+            response = await self.client.audio.speech.create(
+                model="tts-1",
+                voice=use_voice,
+                response_format="mp3",
+                input=text
+            )
+            return response.content

@@ -17,26 +17,45 @@ from src.server import app
 PORT = 8765
 HOST = "127.0.0.1"
 
-def is_port_in_use(port: int) -> bool:
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        return s.connect_ex((HOST, port)) == 0
+def is_parrot_server_responding() -> bool:
+    try:
+        import urllib.request
+        with urllib.request.urlopen(f"http://{HOST}:{PORT}/api/status", timeout=0.6) as resp:
+            return resp.status == 200
+    except Exception:
+        return False
 
 def run_uvicorn_server():
     """Runs the FastAPI server in a background thread."""
-    uvicorn.run(app, host=HOST, port=PORT, log_level="warning")
+    config = uvicorn.Config(app=app, host=HOST, port=PORT, log_level="warning")
+    server = uvicorn.Server(config)
+    server.run()
 
 def set_macos_dock_icon():
-    """Sets the native macOS Dock icon to Parrot's 3D Green Parrot icon."""
+    """Sets the native macOS Dock icon to Parrot's official Green Parrot logo."""
     try:
-        from AppKit import NSApplication, NSImage
+        from AppKit import NSApplication, NSImage, NSApplicationActivationPolicyRegular
         app_kit = NSApplication.sharedApplication()
+        app_kit.setActivationPolicy_(NSApplicationActivationPolicyRegular)
         icon_path = str(BASE_DIR / "assets" / "icon.png")
         if os.path.exists(icon_path):
             icon = NSImage.alloc().initWithContentsOfFile_(icon_path)
             if icon:
                 app_kit.setApplicationIconImage_(icon)
-    except Exception:
-        pass
+                dock_tile = app_kit.dockTile()
+                if dock_tile:
+                    dock_tile.display()
+    except Exception as e:
+        print(f"[!] Erro ao definir ícone da Dock: {e}")
+
+def on_app_started(window=None):
+    """Callback triggered once Cocoa/pywebview initializes."""
+    set_macos_dock_icon()
+    def _refresh():
+        for delay in [0.2, 0.5, 1.2]:
+            time.sleep(delay)
+            set_macos_dock_icon()
+    threading.Thread(target=_refresh, daemon=True).start()
 
 def main():
     print("=" * 60)
@@ -48,12 +67,15 @@ def main():
     print(f"[*] Servidor backend: http://{HOST}:{PORT}")
 
     # Start FastAPI server in background thread if not already running
-    if not is_port_in_use(PORT):
+    if not is_parrot_server_responding():
         server_thread = threading.Thread(target=run_uvicorn_server, daemon=True)
         server_thread.start()
-        time.sleep(0.8)
+        for _ in range(30):
+            time.sleep(0.1)
+            if is_parrot_server_responding():
+                break
     else:
-        print(f"[!] Porta {PORT} já ativa, conectando backend...")
+        print(f"[!] Porta {PORT} já ativa com backend Parrot...")
 
     # If user explicitly specifies --web, open browser
     if "--web" in sys.argv or "--server-only" in sys.argv:
@@ -67,6 +89,7 @@ def main():
             sys.exit(0)
 
     # Launch Native macOS Desktop Application Window
+    icon_file = str(BASE_DIR / "assets" / "icon.png")
     set_macos_dock_icon()
     try:
         import webview
@@ -81,7 +104,7 @@ def main():
             background_color="#F8FAFC", # Light Mode Default
             text_select=True,
         )
-        webview.start(debug=False)
+        webview.start(func=on_app_started, icon=icon_file, debug=False)
     except Exception as e:
         print(f"[!] Erro ao abrir janela desktop nativa: {e}")
         print(f"[+] Abrindo no navegador como alternativa: http://{HOST}:{PORT}")

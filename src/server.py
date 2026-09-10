@@ -41,6 +41,11 @@ class TestAudioRequest(BaseModel):
     target: str = "perssua" # "perssua" or "headphones"
     engine: str = "openai"  # "openai" or "free"
 
+class PreviewVoiceRequest(BaseModel):
+    voice: str
+    engine: str = "openai"
+    text: str | None = None
+
 @app.get("/", response_class=HTMLResponse)
 async def get_index():
     index_file = UI_DIR / "index.html"
@@ -123,6 +128,26 @@ async def test_audio(payload: TestAudioRequest):
     
     await audio_player.play_audio_to_device(audio_bytes, device_id=target_device, volume=1.0)
     return {"success": True, "message": f"Áudio de teste reproduzido no dispositivo {payload.target}."}
+
+@app.post("/api/preview-voice")
+async def preview_voice_endpoint(payload: PreviewVoiceRequest):
+    target_device = parrot_service.headphones_device_id or parrot_service.virtual_output_device_id
+    if target_device is None:
+        raise HTTPException(status_code=400, detail="Dispositivo de saída não encontrado.")
+
+    phrase = payload.text or f"Hello! This is a preview of the {payload.voice} voice in Parrot."
+    engine = parrot_service.openai_engine if payload.engine == "openai" else parrot_service.free_engine
+
+    try:
+        audio_bytes = await engine.synthesize(phrase, lang="en", voice=payload.voice)
+        await audio_player.play_audio_to_device(
+            audio_bytes,
+            device_id=target_device,
+            volume=settings.headphones_volume
+        )
+        return {"success": True, "voice": payload.voice, "message": f"Voz {payload.voice} reproduzida com sucesso."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao sintetizar prévia de voz: {e}")
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):

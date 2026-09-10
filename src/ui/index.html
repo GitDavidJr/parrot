@@ -48,66 +48,106 @@
       background: #334155;
     }
 
-    /* Spotlight Tour Effect */
-    .spotlight-active {
-      position: relative !important;
-      z-index: 60 !important;
-      box-shadow: 0 0 0 4px #059669, 0 0 0 9999px rgba(15, 23, 42, 0.75) !important;
-      border-radius: 8px !important;
-      transition: all 0.3s ease;
+    /* Custom smooth transition for tour spotlight elements */
+    #tour-cutout, #tour-spotlight-border {
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100 min-h-screen font-sans antialiased flex flex-col transition-colors duration-200 selection:bg-parrot-500 selection:text-white">
 
   <!-- Top Navigation Bar: Minimalist & Clean -->
-  <header class="border-b border-slate-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md sticky top-0 z-40 px-6 py-3 flex items-center justify-between shadow-xs">
-    <!-- Clean Brand Logo & Title (Sem bolas, sem subtítulos desnecessários) -->
-    <div class="flex items-center gap-3">
-      <img src="/assets/icon.png" alt="Parrot" class="w-8 h-8 rounded-md object-contain shadow-xs" />
-      <h1 class="font-bold text-lg tracking-tight text-slate-900 dark:text-white">Parrot</h1>
+  <header class="border-b border-slate-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md sticky top-0 z-40 px-6 py-2.5 flex items-center justify-between shadow-xs">
+    <!-- Clean Brand Logo & Title -->
+    <div class="flex items-center gap-2.5">
+      <img src="/assets/icon-flat.svg" alt="Parrot" class="w-8 h-8 object-contain transition-transform hover:scale-105" />
+      <h1 class="font-bold text-base tracking-tight text-slate-900 dark:text-white">Parrot</h1>
     </div>
 
-    <!-- Right Controls: Status & Single User/Settings Avatar with Dropdown -->
-    <div class="flex items-center gap-3">
-      <!-- Status Badge -->
-      <div id="status-badge" class="flex items-center gap-2 px-3 py-1 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-600 dark:text-slate-300">
-        <span id="status-dot" class="w-2 h-2 rounded-full bg-slate-400"></span>
-        <span id="status-text">Inativo</span>
+    <!-- Right Controls: Audio visualizer, ? Help and User Avatar with Dropdown -->
+    <div class="flex items-center gap-2.5">
+      <!-- Audio Visualizer (Mic Meter) -->
+      <div id="mic-visualizer-wrap" class="hidden opacity-0 scale-90 transition-all duration-200 flex items-center gap-1.5 mr-1">
+        <span class="text-[9px] font-bold text-slate-400">MIC</span>
+        <div class="w-2 h-5 bg-slate-200 dark:bg-slate-800 rounded-xs p-0.5 flex flex-col justify-end">
+          <div id="mic-meter-fill" class="w-full bg-emerald-500 rounded-2xs transition-all duration-75" style="height: 0%"></div>
+        </div>
+        <span id="mic-meter-val" class="text-[9px] text-slate-400 font-mono">0%</span>
       </div>
 
-      <!-- Quick Tour Help Button -->
-      <button onclick="startTour()" class="cursor-pointer px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-medium border border-slate-200 dark:border-slate-700 transition-colors flex items-center gap-1.5" title="Ver como funciona o sistema">
-        <span>❓ Como Usar</span>
-      </button>
+      <!-- ? Help Tooltip (No final, antes da bolinha DJ do dropdown) -->
+      <div class="relative group flex items-center">
+        <button type="button" aria-label="Informações sobre a conversa" class="cursor-help w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 flex items-center justify-center text-[11px] font-bold transition-colors border border-slate-200 dark:border-slate-700 select-none">
+          ?
+        </button>
+        <div class="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 absolute right-0 top-full mt-2 z-50 w-72 p-2.5 bg-slate-900 dark:bg-slate-850 text-white text-[11px] leading-relaxed rounded-lg shadow-xl border border-slate-700">
+          Você fala em <strong>Português</strong> (lado direito ➔) e ouve os participantes traduzidos do <strong>Inglês</strong> (⬅ lado esquerdo).
+        </div>
+      </div>
 
       <!-- User / Settings Dropdown Trigger (A Bolinha com Dropdown) -->
       <div class="relative" id="user-menu-container">
-        <button id="btn-user-menu" onclick="toggleUserDropdown(event)" class="cursor-pointer w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shadow-xs hover:bg-emerald-500 transition-all ring-2 ring-emerald-600/20 active:scale-95" title="Menu de Configurações e Preferências">
+        <button id="btn-user-menu" onclick="toggleUserDropdown(event)" class="cursor-pointer relative w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shadow-xs hover:bg-emerald-500 transition-all ring-2 ring-emerald-600/20 active:scale-95 shrink-0 select-none" title="Menu de Configurações, Status e Ajuda">
           <span>DJ</span>
+          <span id="avatar-status-dot" class="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-slate-400 ring-2 ring-white dark:ring-slate-900 transition-colors pointer-events-none"></span>
         </button>
 
         <!-- Dropdown Menu -->
         <div id="user-dropdown" class="hidden absolute right-0 mt-2 w-72 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl py-2 z-50 text-xs">
-          <div class="px-4 py-2 border-b border-slate-100 dark:border-slate-700/60">
-            <div class="font-bold text-slate-900 dark:text-white text-sm">David Junior</div>
-            <div class="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5">
+          <!-- Profile Info + Status Badge (Movido para dentro do Dropdown) -->
+          <div class="px-4 py-2.5 border-b border-slate-100 dark:border-slate-700/60">
+            <div class="flex items-center justify-between">
+              <div class="font-bold text-slate-900 dark:text-white text-sm">David Junior</div>
+              <div id="status-badge" class="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700/60 border border-slate-200 dark:border-slate-600 text-[10px] font-medium text-slate-600 dark:text-slate-300">
+                <span id="status-dot" class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                <span id="status-text">Inativo</span>
+              </div>
+            </div>
+            <div class="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-1">
               <span>IA:</span>
               <strong id="dd-model-text" class="text-emerald-600 dark:text-emerald-400">GPT-5.4 Mini</strong>
             </div>
           </div>
 
           <!-- Engine Switcher inside Menu -->
-          <div class="px-4 py-2.5 border-b border-slate-100 dark:border-slate-700/60">
+          <div class="px-4 py-2 border-b border-slate-100 dark:border-slate-700/60">
             <div class="font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Motor de Inteligência:</div>
             <div class="grid grid-cols-2 gap-1.5">
               <button onclick="setEngine('openai')" id="dd-btn-openai" class="cursor-pointer px-2 py-1.5 rounded-md text-[11px] font-semibold text-center border transition-all bg-emerald-50 dark:bg-emerald-950/50 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300">
-                ⚡ OpenAI (GPT-5.4)
+                ⚡ OpenAI
               </button>
               <button onclick="setEngine('free')" id="dd-btn-free" class="cursor-pointer px-2 py-1.5 rounded-md text-[11px] font-semibold text-center border transition-all border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700">
                 🆓 Gratuito (Edge)
               </button>
             </div>
+          </div>
+
+          <!-- Model Subdropdown (Escolha do Modelo de IA) -->
+          <div class="px-4 py-2.5 border-b border-slate-100 dark:border-slate-700/60" id="dd-model-section">
+            <div class="flex items-center justify-between mb-1">
+              <span class="font-semibold text-slate-700 dark:text-slate-300">Modelo OpenAI:</span>
+              <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono font-bold" id="dd-model-badge">gpt-5.4-mini</span>
+            </div>
+            <select id="sel-dd-openai-model" onchange="changeOpenAIModel(this.value)" class="cursor-pointer w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md p-1.5 text-[11px] text-slate-800 dark:text-slate-200 focus:outline-none focus:border-emerald-500 font-medium">
+              <option value="gpt-5.4-mini">⚡ GPT-5.4 Mini (Mais Rápido & Recente)</option>
+              <option value="gpt-4o-mini">🚀 GPT-4o Mini (Ultra Baixa Latência)</option>
+              <option value="gpt-4o">🧠 GPT-4o (Máxima Precisão)</option>
+              <option value="gpt-5.4">🔬 GPT-5.4 (Raciocínio Profundo)</option>
+            </select>
+          </div>
+
+          <!-- Headphones Test Monitor Toggle (Ouvir Retorno nos Fones) -->
+          <div class="px-4 py-2 border-b border-slate-100 dark:border-slate-700/60 bg-emerald-50/40 dark:bg-emerald-950/20">
+            <label class="cursor-pointer flex items-center justify-between gap-2">
+              <div class="pr-2">
+                <div class="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                  <span>🎧</span>
+                  <span>Ouvir Retorno nos Fones</span>
+                </div>
+                <div class="text-[10px] text-slate-500 dark:text-slate-400">Escutar sua fala traduzida (Modo Teste)</div>
+              </div>
+              <input type="checkbox" id="chk-headphones-monitor" onchange="toggleHeadphonesMonitor(this.checked)" class="cursor-pointer w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 shrink-0" />
+            </label>
           </div>
 
           <!-- Menu Items -->
@@ -130,8 +170,13 @@
               <span id="theme-status-text" class="text-[10px] font-mono text-slate-400">Claro</span>
             </button>
 
-            <button onclick="startTour(); closeUserDropdown();" class="cursor-pointer w-full text-left px-4 py-2 text-emerald-600 dark:text-emerald-400 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 border-t border-slate-100 dark:border-slate-700/60 mt-1 font-semibold">
-              <span>🎯 Tour Guiado (Como Funciona)</span>
+            <!-- Como Usar (Tour Guiado - Movido para dentro do Dropdown) -->
+            <button onclick="startTour(); closeUserDropdown();" class="cursor-pointer w-full text-left px-4 py-2.5 text-emerald-600 dark:text-emerald-400 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center justify-between border-t border-slate-100 dark:border-slate-700/60 mt-1 font-semibold">
+              <span class="flex items-center gap-2">
+                <span>❓</span>
+                <span>Como Usar (Tour Guiado)</span>
+              </span>
+              <span class="text-[10px] bg-emerald-100 dark:bg-emerald-950/80 px-1.5 py-0.5 rounded text-emerald-700 dark:text-emerald-300 font-mono">4 passos</span>
             </button>
           </div>
         </div>
@@ -139,149 +184,52 @@
     </div>
   </header>
 
-  <!-- Main Container -->
-  <main class="flex-1 max-w-7xl w-full mx-auto p-6 space-y-5">
-
-    <!-- Clean Master Control Card (Sem badges confusas de drivers) -->
-    <div id="card-hero" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-5 shadow-xs flex flex-col md:flex-row items-center justify-between gap-5">
-      <div class="space-y-1.5 flex-1">
-        <div class="flex items-center gap-2">
-          <h2 class="text-xl font-bold text-slate-900 dark:text-white tracking-tight">Tradução em Tempo Real</h2>
-          <span id="badge-lang-preview" class="text-xs px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-800">
-            Português ➔ Inglês
-          </span>
+  <!-- Main Container: Fullscreen Modern Chat (Sem subheader, fluido, 100% da viewport) -->
+  <main class="flex-1 flex flex-col h-[calc(100vh-53px)] w-full overflow-hidden bg-slate-50/50 dark:bg-slate-950">
+    <!-- Fullscreen Chat Stream (Sem card, fluido, max-w-4xl para ergonomia visual) -->
+    <div id="feed-chat" class="flex-1 overflow-y-auto px-4 sm:px-8 py-6 space-y-4 max-w-4xl w-full mx-auto flex flex-col">
+      <div id="chat-empty-state" class="m-auto text-center py-20 text-slate-400 dark:text-slate-500 text-xs">
+        <div class="w-12 h-12 mx-auto mb-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
         </div>
-        <p class="text-xs text-slate-500 dark:text-slate-400 max-w-xl">
-          Fale normalmente no seu microfone. O Parrot traduz sua fala em tempo real com voz humana fluente para as pessoas da reunião.
-        </p>
-        <div class="pt-1">
-          <button onclick="openConfigModal()" class="cursor-pointer inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 transition-colors">
-            <span>⚙️ Ajustar Idiomas & Microfone</span>
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-          </button>
-        </div>
-      </div>
-
-      <!-- Right Action & Volume Meter -->
-      <div class="flex items-center gap-4">
-        <!-- Mic Visualizer Bar -->
-        <div class="flex flex-col items-center gap-1">
-          <span class="text-[9px] uppercase font-bold tracking-wider text-slate-400">Mic</span>
-          <div class="w-5 h-16 bg-slate-100 dark:bg-slate-900 rounded-md p-0.5 flex flex-col justify-end border border-slate-200 dark:border-slate-700">
-            <div id="mic-meter-fill" class="w-full bg-emerald-500 rounded-sm transition-all duration-75" style="height: 0%"></div>
-          </div>
-          <span id="mic-meter-val" class="text-[9px] text-slate-400 font-mono">0%</span>
-        </div>
-
-        <!-- Master Start/Stop Button (Cantos modernos rounded-lg) -->
-        <button id="btn-master-toggle" onclick="toggleSession()" class="cursor-pointer group relative px-6 py-3.5 rounded-lg font-bold text-sm transition-all duration-150 shadow-sm flex items-center gap-2.5 bg-emerald-600 hover:bg-emerald-500 active:scale-98 text-white shadow-emerald-600/10">
-          <svg id="btn-master-icon" class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-          <span id="btn-master-text">INICIAR TRADUÇÃO</span>
-        </button>
+        <p class="text-slate-400 dark:text-slate-500 text-xs sm:text-sm font-normal">Nenhuma fala registrada na chamada ainda</p>
       </div>
     </div>
 
-    <!-- Dual Channel Panels -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
-
-      <!-- Column 1: You -> Meeting (PT -> EN) -->
-      <div id="col-user" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg flex flex-col h-[520px] shadow-xs overflow-hidden">
-        <!-- Channel Header -->
-        <div class="p-3.5 border-b border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-850 flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-            <div>
-              <h3 class="font-bold text-sm text-slate-900 dark:text-white">Você ➔ Reunião</h3>
-              <p class="text-[11px] text-slate-500 dark:text-slate-400">Você fala em Português ➔ Traduzido em Inglês para a Chamada</p>
-            </div>
-          </div>
-          <span class="text-[11px] font-mono px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-800">PT ➔ EN</span>
-        </div>
-
-        <!-- Mode Bar (VAD vs Push-to-Talk) -->
-        <div class="px-4 py-2 bg-slate-50/50 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs">
-          <div class="flex items-center gap-3">
-            <span class="text-slate-500 dark:text-slate-400">Captura:</span>
-            <label class="cursor-pointer flex items-center gap-1 text-slate-700 dark:text-slate-200">
-              <input type="radio" name="vad_mode" value="vad" checked onchange="changeCaptureMode('vad')" class="text-emerald-600 focus:ring-0">
-              <span>Automático (ao falar)</span>
-            </label>
-            <label class="cursor-pointer flex items-center gap-1 text-slate-700 dark:text-slate-200">
-              <input type="radio" name="vad_mode" value="ptt" onchange="changeCaptureMode('ptt')" class="text-emerald-600 focus:ring-0">
-              <span>Push-to-Talk (Espaço)</span>
-            </label>
-          </div>
-          <button id="btn-ptt" onmousedown="pttPress()" onmouseup="pttRelease()" class="cursor-pointer hidden px-3 py-1 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold rounded-md text-xs transition-all shadow-xs select-none">
-            🎙️ Segure para Falar
+    <!-- DOCKED BOTTOM INPUT BAR (Mais fino, elegante, sem card artificial) -->
+    <div id="chat-bottom-bar" class="px-4 py-2 sm:py-2.5 border-t border-slate-200/80 dark:border-slate-800/80 bg-white/85 dark:bg-slate-900/85 backdrop-blur-md shrink-0">
+      <form id="form-chat" onsubmit="handleBottomAction(event)" class="max-w-3xl mx-auto flex items-center gap-2">
+        <input 
+          id="input-quick-speak" 
+          type="text" 
+          oninput="handleInputChange()"
+          placeholder="Digite em português para falar na chamada..." 
+          class="cursor-text flex-1 bg-slate-100/90 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 rounded-lg px-3.5 py-1.5 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all shadow-2xs h-9 sm:h-10" 
+        />
+        <!-- Dynamic Action Button: Apenas Ícone Elegante com Tooltip no Hover -->
+        <div class="relative group flex items-center shrink-0">
+          <button 
+            id="btn-bottom-action" 
+            type="submit" 
+            aria-label="Iniciar Tradução"
+            class="cursor-pointer w-9 h-9 sm:w-10 sm:h-10 rounded-lg font-medium text-sm transition-all duration-150 shadow-xs flex items-center justify-center bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white shadow-emerald-600/15 shrink-0 select-none"
+          >
+            <!-- Translation Icon (Lucide Languages standard) -->
+            <svg id="btn-icon-translate" class="w-5 h-5 text-white" style="width: 20px; height: 20px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m5 8 6 6"/>
+              <path d="m4 14 6-6 2-3"/>
+              <path d="M2 5h12"/>
+              <path d="M7 2h1"/>
+              <path d="m22 22-5-10-5 10"/>
+              <path d="M14 18h6"/>
+            </svg>
           </button>
-        </div>
-
-        <!-- Feed User -->
-        <div id="feed-user" class="flex-1 p-4 overflow-y-auto space-y-3">
-          <div class="text-center py-12 text-slate-400 dark:text-slate-500 text-xs">
-            <svg class="w-8 h-8 mx-auto mb-2 opacity-40 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
-            Nenhuma fala sua registrada ainda.<br/>Inicie a tradução e fale no microfone ou digite abaixo.
+          <!-- Tooltip no Hover -->
+          <div id="btn-bottom-tooltip" class="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 absolute bottom-full mb-2 right-0 px-2.5 py-1 bg-slate-900 dark:bg-slate-850 text-white text-[11px] font-medium rounded-md shadow-lg whitespace-nowrap z-50 border border-slate-700">
+            <span id="btn-bottom-text">Iniciar Tradução</span>
           </div>
         </div>
-
-        <!-- Quick Speak Input -->
-        <div class="p-3 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700">
-          <form onsubmit="handleQuickSpeak(event)" class="flex gap-2">
-            <input id="input-quick-speak" type="text" placeholder="Digite em português para falar na chamada..." class="cursor-text flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md px-3 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500 shadow-xs" />
-            <button type="submit" class="cursor-pointer px-4 py-2 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-semibold rounded-md text-xs flex items-center gap-1.5 transition-all shadow-xs">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-              <span>Falar</span>
-            </button>
-          </form>
-        </div>
-      </div>
-
-      <!-- Column 2: Meeting -> You (EN -> PT) -->
-      <div id="col-meeting" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg flex flex-col h-[520px] shadow-xs overflow-hidden">
-        <!-- Channel Header -->
-        <div class="p-3.5 border-b border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-850 flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-sky-500"></span>
-            <div>
-              <h3 class="font-bold text-sm text-slate-900 dark:text-white">Reunião ➔ Você</h3>
-              <p class="text-[11px] text-slate-500 dark:text-slate-400">Participantes falam em Inglês ➔ Traduzido para Você em Português</p>
-            </div>
-          </div>
-          <span class="text-[11px] font-mono px-2 py-0.5 rounded-md bg-sky-50 dark:bg-sky-950 text-sky-700 dark:text-sky-300 font-semibold border border-sky-200 dark:border-sky-800">EN ➔ PT</span>
-        </div>
-
-        <!-- Simulation Bar -->
-        <div class="px-4 py-2 bg-slate-50/50 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs">
-          <span class="text-slate-500 dark:text-slate-400">Testar com fala estrangeira:</span>
-          <div class="flex items-center gap-1.5">
-            <button onclick="simulateSpeech('Hi David, could you give us an update on the roadmap?')" class="cursor-pointer px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-[11px] transition-all">
-              "Roadmap..."
-            </button>
-            <button onclick="simulateSpeech('Sounds great, we are ready to move forward with this.')" class="cursor-pointer px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-[11px] transition-all">
-              "Sounds great..."
-            </button>
-          </div>
-        </div>
-
-        <!-- Feed Meeting -->
-        <div id="feed-meeting" class="flex-1 p-4 overflow-y-auto space-y-3">
-          <div class="text-center py-12 text-slate-400 dark:text-slate-500 text-xs">
-            <svg class="w-8 h-8 mx-auto mb-2 opacity-40 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
-            Nenhuma fala da reunião recebida ainda.<br/>Use os botões de simulação acima para testar a tradução.
-          </div>
-        </div>
-
-        <!-- Custom English Test Input -->
-        <div class="p-3 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700">
-          <form onsubmit="handleSimulateCustom(event)" class="flex gap-2">
-            <input id="input-simulate-en" type="text" placeholder="Digite uma frase em inglês para simular o gringo..." class="cursor-text flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md px-3 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-sky-500 shadow-xs" />
-            <button type="submit" class="cursor-pointer px-4 py-2 bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white font-semibold rounded-md text-xs flex items-center gap-1.5 transition-all shadow-xs">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path></svg>
-              <span>Testar</span>
-            </button>
-          </form>
-        </div>
-      </div>
+      </form>
     </div>
   </main>
 
@@ -329,61 +277,133 @@
 
           <div>
             <label class="block font-medium text-slate-600 dark:text-slate-400 mb-1">Voz sintetizada falada na chamada:</label>
-            <select id="sel-call-voice" class="cursor-pointer w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md p-2 text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500">
-              <option value="alloy">Alloy (Voz Moderna e Fluente)</option>
-              <option value="echo">Echo (Voz Masculina Natural)</option>
-              <option value="nova">Nova (Voz Feminina Natural)</option>
-              <option value="onyx">Onyx (Voz Grave Masculina)</option>
-              <option value="fable">Fable (Voz Expressiva)</option>
-              <option value="shimmer">Shimmer (Voz Clara Feminina)</option>
-            </select>
+            <div class="flex gap-2 items-center">
+              <select id="sel-call-voice" class="cursor-pointer flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md p-2 text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500">
+                <option value="alloy">Alloy (Voz Moderna e Fluente)</option>
+                <option value="echo">Echo (Voz Masculina Natural)</option>
+                <option value="nova">Nova (Voz Feminina Natural)</option>
+                <option value="onyx">Onyx (Voz Grave Masculina)</option>
+                <option value="fable">Fable (Voz Expressiva)</option>
+                <option value="shimmer">Shimmer (Voz Clara Feminina)</option>
+              </select>
+              <button type="button" onclick="previewCurrentVoice()" id="btn-preview-voice" class="cursor-pointer px-3 py-2 rounded-md bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-800 transition-colors flex items-center gap-1.5 shrink-0 shadow-xs" title="Ouvir demonstração desta voz nos seus fones de ouvido">
+                <span id="preview-voice-icon">🔊</span>
+                <span id="preview-voice-text">Ouvir Voz</span>
+              </button>
+            </div>
+            <!-- Quick Voice Audition Chips -->
+            <div class="flex flex-wrap items-center gap-1.5 pt-2">
+              <span class="text-[10px] text-slate-400">Amostras:</span>
+              <button type="button" onclick="previewSpecificVoice('alloy')" class="cursor-pointer text-[10px] px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 hover:bg-emerald-100 dark:hover:bg-emerald-900 text-slate-700 dark:text-slate-200 font-medium">▶ Alloy</button>
+              <button type="button" onclick="previewSpecificVoice('echo')" class="cursor-pointer text-[10px] px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 hover:bg-emerald-100 dark:hover:bg-emerald-900 text-slate-700 dark:text-slate-200 font-medium">▶ Echo</button>
+              <button type="button" onclick="previewSpecificVoice('nova')" class="cursor-pointer text-[10px] px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 hover:bg-emerald-100 dark:hover:bg-emerald-900 text-slate-700 dark:text-slate-200 font-medium">▶ Nova</button>
+              <button type="button" onclick="previewSpecificVoice('onyx')" class="cursor-pointer text-[10px] px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 hover:bg-emerald-100 dark:hover:bg-emerald-900 text-slate-700 dark:text-slate-200 font-medium">▶ Onyx</button>
+              <button type="button" onclick="previewSpecificVoice('fable')" class="cursor-pointer text-[10px] px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 hover:bg-emerald-100 dark:hover:bg-emerald-900 text-slate-700 dark:text-slate-200 font-medium">▶ Fable</button>
+              <button type="button" onclick="previewSpecificVoice('shimmer')" class="cursor-pointer text-[10px] px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 hover:bg-emerald-100 dark:hover:bg-emerald-900 text-slate-700 dark:text-slate-200 font-medium">▶ Shimmer</button>
+            </div>
           </div>
         </div>
 
-        <!-- 2. Onde você fala (Seu microfone) -->
-        <div class="bg-slate-50 dark:bg-slate-900 p-3.5 rounded-lg border border-slate-200 dark:border-slate-700 space-y-2">
+        <!-- 2. Onde você fala e onde a reunião toca -->
+        <div class="bg-slate-50 dark:bg-slate-900 p-3.5 rounded-lg border border-slate-200 dark:border-slate-700 space-y-3">
           <div class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
             <span class="w-2 h-2 rounded-full bg-sky-500"></span>
-            <span>Seu Microfone Físico (Entrada)</span>
+            <span>Dispositivos de Entrada (Você & Reunião)</span>
           </div>
           <div>
-            <label class="block font-medium text-slate-600 dark:text-slate-400 mb-1">Dispositivo onde você fala:</label>
+            <label class="block font-medium text-slate-600 dark:text-slate-400 mb-1">Seu Microfone Físico (Você fala em PT):</label>
             <select id="sel-input-mic" class="cursor-pointer w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md p-2 text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"></select>
+          </div>
+          <div>
+            <label class="block font-medium text-slate-600 dark:text-slate-400 mb-1">Áudio da Reunião / Discord (Estrangeiros falam em EN):</label>
+            <select id="sel-meeting-mic" class="cursor-pointer w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md p-2 text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"></select>
+            <p class="text-[10px] text-slate-400 mt-1 leading-normal">
+              💡 <strong>Como funciona no Discord:</strong> Em <em>Configurações do Discord ➔ Voz & Vídeo</em>, coloque a <strong>Saída (Output)</strong> no <strong>Perssua</strong> (ou Dispositivo com Saída Múltipla) para o Parrot capturar e traduzir as vozes dos gringos automaticamente!
+            </p>
           </div>
         </div>
 
-        <!-- 3. Modelo de IA da OpenAI -->
+        <!-- 3. Modo de Captura de Voz (VAD vs Push-to-Talk) -->
+        <div class="bg-slate-50 dark:bg-slate-900 p-3.5 rounded-lg border border-slate-200 dark:border-slate-700 space-y-2.5">
+          <div class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span>Modo de Captura de Voz</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <label class="cursor-pointer flex items-start gap-2.5 p-2.5 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-emerald-500/50 transition-colors">
+              <input type="radio" name="modal_capture_mode" value="vad" id="radio-mode-vad" class="mt-0.5 text-emerald-600 focus:ring-0 cursor-pointer">
+              <div>
+                <span class="block font-semibold text-slate-800 dark:text-slate-200 text-xs">Automático (ao falar)</span>
+                <span class="text-[11px] text-slate-500 dark:text-slate-400">Ouve e traduz automaticamente ao detectar pausas de fala.</span>
+              </div>
+            </label>
+            <label class="cursor-pointer flex items-start gap-2.5 p-2.5 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-emerald-500/50 transition-colors">
+              <input type="radio" name="modal_capture_mode" value="ptt" id="radio-mode-ptt" class="mt-0.5 text-emerald-600 focus:ring-0 cursor-pointer">
+              <div>
+                <span class="block font-semibold text-slate-800 dark:text-slate-200 text-xs">Push-to-Talk (Espaço)</span>
+                <span class="text-[11px] text-slate-500 dark:text-slate-400">Só captura enquanto você segura a barra de espaço.</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- 4. Modelo de IA & Velocidade de Disparo -->
         <div class="bg-slate-50 dark:bg-slate-900 p-3.5 rounded-lg border border-slate-200 dark:border-slate-700 space-y-2">
           <div class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
             <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-            <span>Inteligência Artificial (OpenAI)</span>
+            <span>Inteligência Artificial & Velocidade de Disparo</span>
           </div>
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="block font-medium text-slate-600 dark:text-slate-400 mb-1">Modelo de Tradução:</label>
               <select id="sel-openai-model" class="cursor-pointer w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md p-2 text-slate-900 dark:text-white font-medium focus:outline-none focus:border-emerald-500">
-                <option value="gpt-5.4-mini">GPT-5.4 Mini (Mais Novo / Ultra Rápido)</option>
-                <option value="gpt-5.4">GPT-5.4 (Máximo Raciocínio)</option>
-                <option value="gpt-5-mini">GPT-5 Mini</option>
-                <option value="gpt-4.1-mini">GPT-4.1 Mini</option>
+                <option value="gpt-5.4-mini">⚡ GPT-5.4 Mini (Mais Rápido & Recente)</option>
+                <option value="gpt-4o-mini">🚀 GPT-4o Mini (Ultra Baixa Latência)</option>
+                <option value="gpt-4o">🧠 GPT-4o (Máxima Precisão)</option>
+                <option value="gpt-5.4">🔬 GPT-5.4 (Raciocínio Profundo)</option>
               </select>
             </div>
             <div>
-              <label class="block font-medium text-slate-600 dark:text-slate-400 mb-1">Pausa para traduzir:</label>
+              <label class="block font-medium text-slate-600 dark:text-slate-400 mb-1">Pausa para disparar (Latência):</label>
               <select id="sel-silence-pause" class="cursor-pointer w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md p-2 text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500">
-                <option value="500">500ms (Muito Rápido)</option>
-                <option value="650" selected>650ms (Equilibrado)</option>
-                <option value="900">900ms (Pausado)</option>
-                <option value="1200">1200ms (Frases Longas)</option>
+                <option value="300">⚡ 300ms (Ultra Rápido — Disparo Instantâneo)</option>
+                <option value="350" selected>⚡ 350ms (Recomendado — Fluente)</option>
+                <option value="500">500ms (Equilibrado)</option>
+                <option value="700">700ms (Pausas Longas)</option>
               </select>
             </div>
           </div>
         </div>
 
-        <!-- 4. Teste de Som -->
-        <div class="pt-1 flex gap-2">
-          <button onclick="testAudioOutput()" class="cursor-pointer flex-1 py-2 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold border border-slate-200 dark:border-slate-600 transition-colors flex items-center justify-center gap-1.5 shadow-xs">
-            <span>🔊 Testar Som da Voz na Reunião</span>
+        <!-- 4. Retorno nos Fones (Modo Teste) -->
+        <div class="bg-emerald-50/50 dark:bg-emerald-950/30 p-3.5 rounded-lg border border-emerald-200/80 dark:border-emerald-800/80">
+          <label class="cursor-pointer flex items-center justify-between gap-3">
+            <div class="space-y-0.5">
+              <span class="font-bold text-slate-900 dark:text-white flex items-center gap-1.5 text-xs">
+                <span>🎧</span>
+                <span>Ouvir Retorno nos Fones de Ouvido (Modo Teste)</span>
+              </span>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                Quando ativado, você ouve sua fala traduzida em inglês nos seus fones simultaneamente com o envio para o Perssua/chamada.
+              </p>
+            </div>
+            <input type="checkbox" id="modal-chk-headphones-monitor" class="cursor-pointer w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 shrink-0" />
+          </label>
+        </div>
+
+        <!-- 5. Teste de Som na Chamada -->
+        <div class="bg-slate-50 dark:bg-slate-900 p-3.5 rounded-lg border border-slate-200 dark:border-slate-700 space-y-2">
+          <div class="space-y-0.5">
+            <div class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+              <span>🔊</span>
+              <span>Testar se o Meet/Zoom ouve sua voz</span>
+            </div>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+              Dispara uma frase de teste em inglês para o microfone virtual (<strong>Perssua</strong>). Abra sua chamada no Google Meet ou Zoom: se o indicador de microfone oscilar, a reunião está recebendo sua voz perfeitamente.
+            </p>
+          </div>
+          <button type="button" onclick="testAudioOutput()" class="cursor-pointer w-full py-2.5 rounded-md bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 font-semibold border border-slate-300 dark:border-slate-600 transition-colors flex items-center justify-center gap-2 shadow-xs">
+            <span>🔊 Disparar Áudio de Teste no Perssua</span>
           </button>
         </div>
       </div>
@@ -397,22 +417,35 @@
   </div>
 
   <!-- Interactive Spotlight Onboarding Tour Overlay -->
-  <div id="tour-overlay" class="hidden fixed inset-0 z-50 pointer-events-auto">
-    <!-- Semi-transparent backdrop -->
-    <div class="absolute inset-0 bg-slate-950/75 backdrop-blur-xs transition-opacity duration-300"></div>
+  <div id="tour-overlay" class="hidden fixed inset-0 z-[99999] pointer-events-auto select-none">
+    <!-- SVG Spotlight Mask with transparent cutout hole -->
+    <svg id="tour-svg" class="fixed inset-0 w-full h-full pointer-events-none z-[99999]" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <mask id="tour-mask">
+          <!-- Entire viewport is white (overlay is visible) -->
+          <rect width="100%" height="100%" fill="white" />
+          <!-- Cutout window is black (100% transparent hole to reveal target element) -->
+          <rect id="tour-cutout" x="0" y="0" width="0" height="0" rx="8" ry="8" fill="black" />
+        </mask>
+      </defs>
+      <!-- Dimmed backdrop with cutout mask -->
+      <rect width="100%" height="100%" fill="rgba(15, 23, 42, 0.78)" mask="url(#tour-mask)" class="pointer-events-auto" />
+      <!-- Glowing green border around the spotlight cutout -->
+      <rect id="tour-spotlight-border" x="0" y="0" width="0" height="0" rx="8" ry="8" fill="none" stroke="#059669" stroke-width="3" class="pointer-events-none" />
+    </svg>
 
-    <!-- Spotlight Floating Balloon Card -->
-    <div id="tour-balloon" class="absolute z-60 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-5 shadow-2xl max-w-sm w-full text-xs space-y-3 transition-all duration-300">
+    <!-- Spotlight Floating Balloon Card (Always on top of everything, z-[100000]) -->
+    <div id="tour-balloon" class="fixed z-[100000] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-5 shadow-2xl w-full max-w-sm text-xs space-y-3 pointer-events-auto transition-all duration-300">
       <div class="flex items-center justify-between">
         <span id="tour-step-badge" class="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold font-mono text-[10px] border border-emerald-200 dark:border-emerald-800">
           Passo 1 de 4
         </span>
-        <button onclick="skipTour()" class="cursor-pointer text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-[11px]">
-          Pular
+        <button onclick="skipTour()" class="cursor-pointer text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-[11px] font-medium transition-colors">
+          Pular tour ✕
         </button>
       </div>
 
-      <div class="space-y-1">
+      <div class="space-y-1.5">
         <h4 id="tour-title" class="font-bold text-sm text-slate-900 dark:text-white">Ligar Tradução</h4>
         <p id="tour-desc" class="text-slate-600 dark:text-slate-300 leading-relaxed text-xs">
           Clique neste botão para iniciar. Quando você falar no seu microfone, o Parrot traduz instantaneamente.
@@ -420,11 +453,11 @@
       </div>
 
       <div class="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-700/60">
-        <button id="tour-btn-prev" onclick="prevTourStep()" class="cursor-pointer px-3 py-1.5 rounded-md text-slate-500 hover:text-slate-800 dark:hover:text-white text-xs hidden">
+        <button id="tour-btn-prev" onclick="prevTourStep()" class="cursor-pointer px-3 py-1.5 rounded-md text-slate-500 hover:text-slate-800 dark:hover:text-white text-xs font-semibold hidden transition-colors">
           Anterior
         </button>
         <div class="ml-auto flex items-center gap-2">
-          <button id="tour-btn-next" onclick="nextTourStep()" class="cursor-pointer px-4 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs">
+          <button id="tour-btn-next" onclick="nextTourStep()" class="cursor-pointer px-4 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs transition-colors">
             Próximo ➔
           </button>
         </div>
@@ -446,14 +479,14 @@ let currentStatus = {
 // DOM Elements
 const statusDot = document.getElementById('status-dot');
 const statusText = document.getElementById('status-text');
-const btnMasterToggle = document.getElementById('btn-master-toggle');
-const btnMasterText = document.getElementById('btn-master-text');
-const btnMasterIcon = document.getElementById('btn-master-icon');
+const btnBottomAction = document.getElementById('btn-bottom-action');
+const btnBottomText = document.getElementById('btn-bottom-text');
 const micMeterFill = document.getElementById('mic-meter-fill');
 const micMeterVal = document.getElementById('mic-meter-val');
-const feedUser = document.getElementById('feed-user');
-const feedMeeting = document.getElementById('feed-meeting');
-const btnPtt = document.getElementById('btn-ptt');
+const feedChat = document.getElementById('feed-chat');
+const inputQuickSpeak = document.getElementById('input-quick-speak');
+const chatStatusDot = document.getElementById('chat-status-dot');
+const chatStatusLabel = document.getElementById('chat-status-label');
 const userDropdown = document.getElementById('user-dropdown');
 const badgeLangPreview = document.getElementById('badge-lang-preview');
 const ddModelText = document.getElementById('dd-model-text');
@@ -559,8 +592,7 @@ function handleServerMessage(msg) {
     populateConfigModal(data.devices, data.settings);
 
     if (data.history && data.history.length > 0) {
-      feedUser.innerHTML = '';
-      feedMeeting.innerHTML = '';
+      if (feedChat) feedChat.innerHTML = '';
       data.history.forEach(appendMessageCard);
     }
 
@@ -596,24 +628,136 @@ function updateMeter(level, isSpeaking) {
 }
 
 function updateStatusPill(status, message) {
-  statusText.textContent = message || (status === 'listening' ? 'Ouvindo...' : 'Inativo');
+  if (statusText) statusText.textContent = message || (status === 'listening' ? 'Ouvindo...' : 'Inativo');
+  const avatarDot = document.getElementById('avatar-status-dot');
+  const chatDot = document.getElementById('chat-status-dot');
+  const chatLabel = document.getElementById('chat-status-label');
+  const micWrap = document.getElementById('mic-visualizer-wrap');
+
+  const isActive = currentStatus.is_active || ['listening', 'transcribing', 'translating', 'speaking'].includes(status);
+
+  // Smooth appearance/disappearance of the Mic level bar
+  if (isActive) {
+    if (micWrap) {
+      micWrap.classList.remove('hidden');
+      requestAnimationFrame(() => {
+        micWrap.classList.remove('opacity-0', 'scale-90');
+        micWrap.classList.add('opacity-100', 'scale-100');
+      });
+    }
+  } else {
+    if (micWrap) {
+      micWrap.classList.remove('opacity-100', 'scale-100');
+      micWrap.classList.add('opacity-0', 'scale-90');
+      setTimeout(() => {
+        if (!currentStatus.is_active) micWrap.classList.add('hidden');
+      }, 200);
+    }
+  }
+
+  const labelMap = {
+    listening: 'Ouvindo...',
+    transcribing: 'Transcrevendo...',
+    translating: 'Traduzindo...',
+    speaking: 'Transmitindo...',
+    idle: 'Inativo'
+  };
+
+  if (chatLabel) {
+    chatLabel.textContent = message || labelMap[status] || 'Inativo';
+  }
 
   if (status === 'listening') {
-    statusDot.className = 'w-2 h-2 rounded-full bg-emerald-500 animate-pulse';
-    btnMasterText.textContent = 'PAUSAR TRADUÇÃO';
-    btnMasterToggle.className = 'cursor-pointer group relative px-6 py-3.5 rounded-lg font-bold text-sm transition-all duration-150 shadow-sm flex items-center gap-2 bg-rose-600 hover:bg-rose-500 active:scale-98 text-white shadow-rose-600/20';
-    btnMasterIcon.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
+    if (statusDot) statusDot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse';
+    if (avatarDot) avatarDot.className = 'absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900 animate-pulse pointer-events-none';
+    if (chatDot) chatDot.className = 'w-2 h-2 rounded-full bg-emerald-500 animate-pulse';
   } else if (status === 'transcribing') {
-    statusDot.className = 'w-2 h-2 rounded-full bg-amber-500 animate-ping';
+    if (statusDot) statusDot.className = 'w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping';
+    if (avatarDot) avatarDot.className = 'absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-500 ring-2 ring-white dark:ring-slate-900 pointer-events-none';
+    if (chatDot) chatDot.className = 'w-2 h-2 rounded-full bg-amber-500 animate-pulse';
   } else if (status === 'translating') {
-    statusDot.className = 'w-2 h-2 rounded-full bg-sky-500 animate-pulse';
+    if (statusDot) statusDot.className = 'w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse';
+    if (avatarDot) avatarDot.className = 'absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-sky-500 ring-2 ring-white dark:ring-slate-900 pointer-events-none';
+    if (chatDot) chatDot.className = 'w-2 h-2 rounded-full bg-sky-500 animate-pulse';
   } else if (status === 'speaking') {
-    statusDot.className = 'w-2 h-2 rounded-full bg-emerald-600 animate-bounce';
+    if (statusDot) statusDot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-600 animate-bounce';
+    if (avatarDot) avatarDot.className = 'absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-600 ring-2 ring-white dark:ring-slate-900 pointer-events-none';
+    if (chatDot) chatDot.className = 'w-2 h-2 rounded-full bg-emerald-600 animate-bounce';
   } else {
-    statusDot.className = 'w-2 h-2 rounded-full bg-slate-400';
-    btnMasterText.textContent = 'INICIAR TRADUÇÃO';
-    btnMasterToggle.className = 'cursor-pointer group relative px-6 py-3.5 rounded-lg font-bold text-sm transition-all duration-150 shadow-sm flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 active:scale-98 text-white shadow-emerald-600/10';
-    btnMasterIcon.innerHTML = '<path d="M8 5v14l11-7z"/>';
+    if (statusDot) statusDot.className = 'w-1.5 h-1.5 rounded-full bg-slate-400';
+    if (avatarDot) avatarDot.className = 'absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-slate-400 ring-2 ring-white dark:ring-slate-900 pointer-events-none';
+    if (chatDot) chatDot.className = 'w-2 h-2 rounded-full bg-slate-400';
+  }
+
+  updateBottomButtonState();
+}
+
+function updateBottomButtonState() {
+  const input = document.getElementById('input-quick-speak');
+  const btn = document.getElementById('btn-bottom-action');
+  if (!btn) return;
+
+  const hasText = input && input.value.trim().length > 0;
+  const isActive = currentStatus.is_active || ['listening', 'transcribing', 'translating', 'speaking'].includes(currentStatus.status);
+
+  if (hasText) {
+    btn.className = "cursor-pointer w-9 h-9 sm:w-10 sm:h-10 rounded-lg font-medium text-sm transition-all duration-150 shadow-xs flex items-center justify-center bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white shadow-emerald-600/15 shrink-0 select-none";
+    btn.innerHTML = `
+      <svg class="w-5 h-5 text-white" style="width: 20px; height: 20px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+    `;
+    const tooltipText = document.getElementById('btn-bottom-text');
+    if (tooltipText) tooltipText.textContent = "Falar na Chamada (Enter)";
+    btn.title = "Falar na Chamada (Enter)";
+    btn.setAttribute('aria-label', "Falar na Chamada");
+  } else {
+    if (isActive) {
+      btn.className = "cursor-pointer w-9 h-9 sm:w-10 sm:h-10 rounded-lg font-medium text-sm transition-all duration-150 shadow-xs flex items-center justify-center bg-rose-600 hover:bg-rose-500 active:scale-95 text-white shadow-rose-600/20 shrink-0 select-none";
+      btn.innerHTML = `
+        <svg class="w-5 h-5 text-white" style="width: 20px; height: 20px;" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+      `;
+      const tooltipText = document.getElementById('btn-bottom-text');
+      if (tooltipText) tooltipText.textContent = "Parar Tradução";
+      btn.title = "Parar Tradução";
+      btn.setAttribute('aria-label', "Parar Tradução");
+    } else {
+      btn.className = "cursor-pointer w-9 h-9 sm:w-10 sm:h-10 rounded-lg font-medium text-sm transition-all duration-150 shadow-xs flex items-center justify-center bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white shadow-emerald-600/15 shrink-0 select-none";
+      btn.innerHTML = `
+        <svg class="w-5 h-5 text-white" style="width: 20px; height: 20px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m5 8 6 6"/>
+          <path d="m4 14 6-6 2-3"/>
+          <path d="M2 5h12"/>
+          <path d="M7 2h1"/>
+          <path d="m22 22-5-10-5 10"/>
+          <path d="M14 18h6"/>
+        </svg>
+      `;
+      const tooltipText = document.getElementById('btn-bottom-text');
+      if (tooltipText) tooltipText.textContent = "Iniciar Tradução";
+      btn.title = "Iniciar Tradução";
+      btn.setAttribute('aria-label', "Iniciar Tradução");
+    }
+  }
+}
+
+function handleInputChange() {
+  updateBottomButtonState();
+}
+
+async function handleBottomAction(e) {
+  if (e) e.preventDefault();
+  const input = document.getElementById('input-quick-speak');
+  const text = input ? input.value.trim() : '';
+
+  if (text) {
+    input.value = '';
+    updateBottomButtonState();
+    await fetch('/api/quick-speak', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    }).catch(err => console.error(err));
+  } else {
+    toggleSession();
   }
 }
 
@@ -640,21 +784,65 @@ function updateUIState() {
     if (ddBtnOpenAI) ddBtnOpenAI.className = 'cursor-pointer px-2 py-1.5 rounded-md text-[11px] font-semibold text-center border transition-all border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700';
   }
 
+  // Sync model dropdown & badge
+  const ddModelSelect = document.getElementById('sel-dd-openai-model');
+  const ddModelBadge = document.getElementById('dd-model-badge');
+  const ddModelSec = document.getElementById('dd-model-section');
+  if (ddModelSelect) ddModelSelect.value = model;
+  if (ddModelBadge) ddModelBadge.textContent = model;
+  if (ddModelSec) ddModelSec.style.display = (engine === 'openai') ? 'block' : 'none';
+
+  // Sync headphones monitor checkboxes
+  const isMonitor = Boolean(currentStatus.settings.play_translated_to_headphones);
+  const chkDropdown = document.getElementById('chk-headphones-monitor');
+  const chkModal = document.getElementById('modal-chk-headphones-monitor');
+  if (chkDropdown) chkDropdown.checked = isMonitor;
+  if (chkModal) chkModal.checked = isMonitor;
+
   updateStatusPill(currentStatus.status);
+}
+
+async function changeOpenAIModel(model) {
+  currentStatus.settings.openai_model = model;
+  const badge = document.getElementById('dd-model-badge');
+  if (badge) badge.textContent = model;
+  if (ddModelText) ddModelText.textContent = model.replace('-mini', ' Mini').replace('gpt-', 'GPT-');
+  const selModal = document.getElementById('sel-openai-model');
+  if (selModal) selModal.value = model;
+
+  await fetch('/api/settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ openai_model: model })
+  }).catch(() => {});
+}
+
+async function toggleHeadphonesMonitor(checked) {
+  currentStatus.settings.play_translated_to_headphones = checked;
+  const chkDropdown = document.getElementById('chk-headphones-monitor');
+  const chkModal = document.getElementById('modal-chk-headphones-monitor');
+  if (chkDropdown) chkDropdown.checked = checked;
+  if (chkModal) chkModal.checked = checked;
+
+  await fetch('/api/settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ play_translated_to_headphones: checked })
+  }).catch(() => {});
 }
 
 // -------------------------------------------------------------
 // 4. Robust Master Start/Stop Toggle
 // -------------------------------------------------------------
 async function toggleSession() {
-  const btn = document.getElementById('btn-master-toggle');
-  const btnText = document.getElementById('btn-master-text');
+  const btn = document.getElementById('btn-bottom-action');
+  const btnText = document.getElementById('btn-bottom-text');
 
   const willStart = !currentStatus.is_active;
   
   // Immediate tactile feedback
-  btnText.textContent = willStart ? "LIGANDO..." : "PARANDO...";
-  btn.disabled = true;
+  if (btnText) btnText.textContent = willStart ? "LIGANDO..." : "PARANDO...";
+  if (btn) btn.disabled = true;
 
   try {
     const endpoint = willStart ? '/api/start' : '/api/stop';
@@ -664,7 +852,7 @@ async function toggleSession() {
     if (res.ok && data.success) {
       currentStatus.is_active = willStart;
       currentStatus.status = data.status || (willStart ? 'listening' : 'idle');
-      updateStatusPill(currentStatus.status, willStart ? 'Parrot ouvindo microfone...' : 'Parrot pausado.');
+      updateStatusPill(currentStatus.status, willStart ? 'Ouvindo microfone...' : 'Inativo');
       
       // Notify WS
       if (ws && ws.readyState === WebSocket.OPEN) {
@@ -679,7 +867,8 @@ async function toggleSession() {
     alert("Falha ao comunicar com o servidor Parrot. Verifique se a aplicação está em execução.");
     updateStatusPill(currentStatus.status);
   } finally {
-    btn.disabled = false;
+    if (btn) btn.disabled = false;
+    updateBottomButtonState();
   }
 }
 
@@ -697,47 +886,59 @@ async function setEngine(engine) {
 // 5. Message Cards Rendering
 // -------------------------------------------------------------
 function appendMessageCard(item) {
-  const isUser = item.channel === 'user_to_meeting';
-  const container = isUser ? feedUser : feedMeeting;
+  const container = document.getElementById('feed-chat');
+  if (!container) return;
 
-  if (container.querySelector('svg')) {
-    container.innerHTML = '';
+  const emptyState = document.getElementById('chat-empty-state');
+  if (emptyState) {
+    emptyState.remove();
   }
 
-  const card = document.createElement('div');
-  card.className = `p-3 rounded-lg border transition-all ${
-    isUser 
-      ? 'bg-emerald-50/40 dark:bg-slate-900/90 border-emerald-200 dark:border-emerald-800 shadow-xs' 
-      : 'bg-sky-50/40 dark:bg-slate-900/90 border-sky-200 dark:border-sky-800 shadow-xs'
-  }`;
+  const isUser = item.channel === 'user_to_meeting';
+  const row = document.createElement('div');
+  row.className = `flex flex-col w-full ${isUser ? 'items-end' : 'items-start'} transition-all`;
 
-  const headerColor = isUser ? 'text-emerald-700 dark:text-emerald-400' : 'text-sky-700 dark:text-sky-400';
-  const headerLabel = isUser ? 'Você (Português)' : 'Participante (Inglês)';
-  const translatedLabel = isUser ? 'Injetado na Chamada (Inglês):' : 'Traduzido para Você (Português):';
-
-  card.innerHTML = `
-    <div class="flex items-center justify-between mb-1">
-      <span class="text-xs font-bold ${headerColor} flex items-center gap-1.5">
-        <span class="w-1.5 h-1.5 rounded-full ${isUser ? 'bg-emerald-600' : 'bg-sky-600'}"></span>
-        ${headerLabel}
-      </span>
-      <div class="flex items-center gap-1.5">
-        <span class="text-[10px] font-mono text-slate-500 bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
-          ⚡ ${item.latency_ms || 0}ms
-        </span>
-        <span class="text-[10px] text-slate-400 font-mono">${item.timestamp}</span>
+  if (isUser) {
+    // Right side: User spoke/typed in Portuguese -> English spoken to meeting
+    row.innerHTML = `
+      <div class="max-w-[85%] sm:max-w-[75%] md:max-w-[65%] bg-emerald-600 dark:bg-emerald-650 text-white rounded-2xl rounded-tr-xs p-3.5 shadow-xs space-y-1.5 transition-all">
+        <div class="flex items-center justify-between gap-3 text-[11px] text-emerald-100 font-medium">
+          <span class="flex items-center gap-1.5 font-bold">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-200"></span>
+            Você ➔ Chamada (Inglês)
+          </span>
+          <span class="text-[10px] text-emerald-200/90 font-mono">${escapeHtml(item.timestamp || '')}</span>
+        </div>
+        <div class="text-sm font-semibold leading-snug">
+          "${escapeHtml(item.translated || '')}"
+        </div>
+        <div class="text-xs text-emerald-100/80 pt-1 border-t border-emerald-500/50 italic">
+          Original (PT): "${escapeHtml(item.original || '')}"
+        </div>
       </div>
-    </div>
-    <div class="text-xs text-slate-600 dark:text-slate-300 italic mb-1.5 pl-2 border-l-2 ${isUser ? 'border-emerald-300 dark:border-emerald-700' : 'border-sky-300 dark:border-sky-700'}">
-      "${escapeHtml(item.original)}"
-    </div>
-    <div class="text-xs font-semibold text-slate-900 dark:text-white bg-white dark:bg-slate-950 p-2 rounded border ${isUser ? 'border-emerald-100 dark:border-slate-800' : 'border-sky-100 dark:border-slate-800'}">
-      <span class="text-[9px] block font-normal text-slate-400 mb-0.5">${translatedLabel}</span>
-      "${escapeHtml(item.translated)}"
-    </div>
-  `;
+    `;
+  } else {
+    // Left side: Meeting participant spoke English -> Portuguese translated to user
+    row.innerHTML = `
+      <div class="max-w-[85%] sm:max-w-[75%] md:max-w-[65%] bg-slate-100 dark:bg-slate-850 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700/80 rounded-2xl rounded-tl-xs p-3.5 shadow-xs space-y-1.5 transition-all">
+        <div class="flex items-center justify-between gap-3 text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+          <span class="flex items-center gap-1.5 text-sky-600 dark:text-sky-400 font-bold">
+            <span class="w-1.5 h-1.5 rounded-full bg-sky-500"></span>
+            Chamada ➔ Você (Português)
+          </span>
+          <span class="text-[10px] text-slate-400 font-mono">${escapeHtml(item.timestamp || '')}</span>
+        </div>
+        <div class="text-sm font-semibold leading-snug">
+          "${escapeHtml(item.translated || '')}"
+        </div>
+        <div class="text-xs text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-200 dark:border-slate-700/60 italic">
+          Original (EN): "${escapeHtml(item.original || '')}"
+        </div>
+      </div>
+    `;
+  }
 
-  container.appendChild(card);
+  container.appendChild(row);
   container.scrollTop = container.scrollHeight;
 }
 
@@ -748,20 +949,6 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-// Quick Speak Text
-async function handleQuickSpeak(e) {
-  e.preventDefault();
-  const input = document.getElementById('input-quick-speak');
-  const text = input.value.trim();
-  if (!text) return;
-  input.value = '';
-
-  await fetch('/api/quick-speak', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text })
-  });
-}
 
 // Simulate Meeting Speech
 async function simulateSpeech(text) {
@@ -772,14 +959,6 @@ async function simulateSpeech(text) {
   });
 }
 
-async function handleSimulateCustom(e) {
-  e.preventDefault();
-  const input = document.getElementById('input-simulate-en');
-  const text = input.value.trim();
-  if (!text) return;
-  input.value = '';
-  await simulateSpeech(text);
-}
 
 // Push to Talk (PTT)
 function pttPress() {
@@ -796,16 +975,11 @@ function pttRelease() {
 
 function changeCaptureMode(mode) {
   currentStatus.settings.capture_mode = mode;
-  if (mode === 'ptt') {
-    btnPtt.classList.remove('hidden');
-  } else {
-    btnPtt.classList.add('hidden');
-  }
   fetch('/api/settings', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ capture_mode: mode })
-  });
+  }).catch(() => {});
 }
 
 // Spacebar PTT listener
@@ -843,6 +1017,7 @@ function closeConfigModal() {
 
 function populateConfigModal(devices, setts) {
   const selMic = document.getElementById('sel-input-mic');
+  const selMeetingMic = document.getElementById('sel-meeting-mic');
   const selModel = document.getElementById('sel-openai-model');
   const selVoice = document.getElementById('sel-call-voice');
   const selSource = document.getElementById('sel-source-lang');
@@ -861,28 +1036,101 @@ function populateConfigModal(devices, setts) {
     });
   }
 
+  if (devices && (devices.meeting_inputs || devices.inputs)) {
+    if (selMeetingMic) {
+      selMeetingMic.innerHTML = '';
+      const list = devices.meeting_inputs || devices.inputs;
+      const chosenMeeting = setts.meeting_device_id ?? devices.recommended.meeting_device_id;
+      list.forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d.id;
+        opt.textContent = `${d.name}${d.name.toLowerCase().includes('perssua') ? ' (Recomendado para Discord/Meet)' : ''}`;
+        if (d.id === chosenMeeting) opt.selected = true;
+        selMeetingMic.appendChild(opt);
+      });
+    }
+  }
+
   if (selModel && setts.openai_model) selModel.value = setts.openai_model;
   if (selVoice && setts.openai_voice) selVoice.value = setts.openai_voice;
   if (selSource && setts.source_lang) selSource.value = setts.source_lang;
   if (selTarget && setts.target_lang) selTarget.value = setts.target_lang;
   if (selPause && setts.vad_silence_threshold_ms) selPause.value = String(setts.vad_silence_threshold_ms);
+
+  const mode = setts.capture_mode || 'vad';
+  const radioVad = document.getElementById('radio-mode-vad');
+  const radioPtt = document.getElementById('radio-mode-ptt');
+  if (radioVad && radioPtt) {
+    if (mode === 'ptt') radioPtt.checked = true;
+    else radioVad.checked = true;
+  }
+
+  const chkMonitor = document.getElementById('modal-chk-headphones-monitor');
+  if (chkMonitor) chkMonitor.checked = Boolean(setts.play_translated_to_headphones);
+}
+
+async function previewSpecificVoice(voice) {
+  const selVoice = document.getElementById('sel-call-voice');
+  if (selVoice) selVoice.value = voice;
+  await previewCurrentVoice(voice);
+}
+
+function previewVoiceChip(voice) {
+  previewSpecificVoice(voice);
+}
+
+async function previewCurrentVoice(overrideVoice) {
+  const selVoice = document.getElementById('sel-call-voice');
+  const voice = overrideVoice || (selVoice ? selVoice.value : 'alloy');
+  const btnIcon = document.getElementById('preview-voice-icon');
+  const btnText = document.getElementById('preview-voice-text');
+
+  if (btnText) btnText.textContent = 'Tocando...';
+  if (btnIcon) btnIcon.textContent = '⏳';
+
+  try {
+    const res = await fetch('/api/preview-voice', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        voice: voice,
+        engine: currentStatus.settings.engine || 'openai',
+        text: `Hello! This is a preview of the ${voice} voice in Parrot.`
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.detail || 'Erro ao ouvir voz.');
+    }
+  } catch (e) {
+    alert('Erro ao conectar para ouvir voz: ' + e);
+  } finally {
+    if (btnText) btnText.textContent = 'Ouvir Voz';
+    if (btnIcon) btnIcon.textContent = '🔊';
+  }
 }
 
 async function saveConfigModal() {
   const selMic = document.getElementById('sel-input-mic');
+  const selMeetingMic = document.getElementById('sel-meeting-mic');
   const selModel = document.getElementById('sel-openai-model');
   const selVoice = document.getElementById('sel-call-voice');
   const selSource = document.getElementById('sel-source-lang');
   const selTarget = document.getElementById('sel-target-lang');
   const selPause = document.getElementById('sel-silence-pause');
+  const chkMonitor = document.getElementById('modal-chk-headphones-monitor');
+  const selCaptureMode = document.querySelector('input[name="modal_capture_mode"]:checked');
 
   const payload = {
     input_device_id: parseInt(selMic.value),
+    meeting_device_id: selMeetingMic ? parseInt(selMeetingMic.value) : undefined,
     openai_model: selModel.value,
     openai_voice: selVoice.value,
     source_lang: selSource.value,
     target_lang: selTarget.value,
-    vad_silence_threshold_ms: parseInt(selPause.value)
+    vad_silence_threshold_ms: parseInt(selPause.value),
+    play_translated_to_headphones: chkMonitor ? chkMonitor.checked : false,
+    capture_mode: selCaptureMode ? selCaptureMode.value : 'vad'
   };
 
   const res = await fetch('/api/settings', {
@@ -913,45 +1161,52 @@ async function testAudioOutput() {
 }
 
 // -------------------------------------------------------------
-// 7. Interactive Spotlight Onboarding Tour
+// 7. Interactive Spotlight Onboarding Tour (SVG Cutout Mask)
 // -------------------------------------------------------------
 let tourIndex = 0;
 const tourSteps = [
   {
-    targetId: 'btn-master-toggle',
-    title: '1. Ativar o Tradutor',
-    desc: 'Clique aqui quando sua reunião começar. O Parrot fica ouvindo seu microfone e a barrinha de volume ao lado mostra quando você está falando.',
-    position: 'bottom'
+    targetId: 'btn-bottom-action',
+    title: '1. Iniciar / Parar Tradução',
+    desc: 'Clique aqui (ou pressione Enter com o campo vazio) para iniciar a tradução da reunião. O Parrot começa a ouvir seu microfone e a traduzir os participantes.'
   },
   {
-    targetId: 'col-user',
-    title: '2. Seu Canal de Voz (Você ➔ Reunião)',
-    desc: 'Fale normalmente em Português. Quando você fizer uma pausa, o Parrot sintetiza a fala em Inglês fluente para as pessoas da reunião ouvirem.',
-    position: 'right'
+    targetId: 'feed-chat',
+    title: '2. Conversa da Chamada em Tempo Real',
+    desc: 'Toda a reunião flui aqui em uma linha do tempo unificada: suas falas traduzidas aparecem à direita (verde) e o que os estrangeiros falam aparece à esquerda (azul).'
   },
   {
-    targetId: 'col-meeting',
-    title: '3. Fala dos Estrangeiros (Reunião ➔ Você)',
-    desc: 'Aqui você acompanha o que os participantes falam em inglês, transcrito e traduzido para português em tempo real para você não perder nada.',
-    position: 'left'
+    targetId: 'input-quick-speak',
+    title: '3. Digitar para Falar (Opcional)',
+    desc: 'Se preferir não falar no microfone, digite sua mensagem em português aqui. O botão se transforma em "Falar" e injeta sua fala sintetizada em inglês diretamente na chamada.'
   },
   {
     targetId: 'btn-user-menu',
     title: '4. Menu e Ajustes de Áudio',
-    desc: 'Neste menu você ajusta idiomas, vozes e microfones. No seu Google Meet ou Zoom, lembre-se de selecionar o microfone da chamada como "Perssua"!',
-    position: 'bottom-left'
+    desc: 'Neste menu você ajusta idiomas, vozes e microfones. No seu Google Meet, Zoom ou Discord, selecione o microfone da chamada como "Perssua"!'
   }
 ];
 
 function startTour() {
   tourIndex = 0;
-  document.getElementById('tour-overlay').classList.remove('hidden');
+  const overlay = document.getElementById('tour-overlay');
+  if (overlay) overlay.classList.remove('hidden');
   renderTourStep();
 }
 
 function skipTour() {
-  cleanupTourHighlights();
-  document.getElementById('tour-overlay').classList.add('hidden');
+  const overlay = document.getElementById('tour-overlay');
+  if (overlay) overlay.classList.add('hidden');
+  const cutout = document.getElementById('tour-cutout');
+  if (cutout) {
+    cutout.setAttribute('width', '0');
+    cutout.setAttribute('height', '0');
+  }
+  const border = document.getElementById('tour-spotlight-border');
+  if (border) {
+    border.setAttribute('width', '0');
+    border.setAttribute('height', '0');
+  }
   localStorage.setItem('parrot_tour_shown', 'true');
 }
 
@@ -971,17 +1226,11 @@ function prevTourStep() {
   }
 }
 
-function cleanupTourHighlights() {
-  document.querySelectorAll('.spotlight-active').forEach(el => {
-    el.classList.remove('spotlight-active');
-  });
-}
-
 function renderTourStep() {
-  cleanupTourHighlights();
-
   const step = tourSteps[tourIndex];
   const target = document.getElementById(step.targetId);
+  const cutout = document.getElementById('tour-cutout');
+  const border = document.getElementById('tour-spotlight-border');
   const balloon = document.getElementById('tour-balloon');
   const badge = document.getElementById('tour-step-badge');
   const title = document.getElementById('tour-title');
@@ -1005,36 +1254,100 @@ function renderTourStep() {
     btnNext.textContent = 'Próximo ➔';
   }
 
-  if (target) {
-    target.classList.add('spotlight-active');
+  if (target && balloon) {
+    // Scroll element smoothly into view if needed
+    target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     const rect = target.getBoundingClientRect();
-    
-    // Position balloon
-    let top = rect.bottom + 16;
-    let left = rect.left;
+    const padding = 8;
 
-    if (step.position === 'right') {
-      top = rect.top + 40;
-      left = rect.right - 340;
-    } else if (step.position === 'left') {
-      top = rect.top + 40;
-      left = rect.left + 20;
-    } else if (step.position === 'bottom-left') {
-      top = rect.bottom + 16;
-      left = Math.max(20, rect.right - 320);
-    } else {
-      top = rect.bottom + 16;
-      left = Math.max(20, rect.left - 120);
+    // SVG spotlight cutout window
+    const cutX = Math.max(0, rect.left - padding);
+    const cutY = Math.max(0, rect.top - padding);
+    const cutW = rect.width + (padding * 2);
+    const cutH = rect.height + (padding * 2);
+
+    if (cutout) {
+      cutout.setAttribute('x', cutX);
+      cutout.setAttribute('y', cutY);
+      cutout.setAttribute('width', cutW);
+      cutout.setAttribute('height', cutH);
+    }
+    if (border) {
+      border.setAttribute('x', cutX);
+      border.setAttribute('y', cutY);
+      border.setAttribute('width', cutW);
+      border.setAttribute('height', cutH);
     }
 
-    // Clamp within viewport
-    top = Math.max(20, Math.min(window.innerHeight - 240, top));
-    left = Math.max(20, Math.min(window.innerWidth - 380, left));
+    // Balloon placement: NEVER collide with or cover the spotlighted card
+    const balloonWidth = Math.min(360, window.innerWidth - 48);
+    const balloonHeight = 190;
+    balloon.style.width = `${balloonWidth}px`;
 
-    balloon.style.top = `${top}px`;
-    balloon.style.left = `${left}px`;
+    let balloonTop = 0;
+    let balloonLeft = 0;
+
+    const screenMidX = window.innerWidth / 2;
+    const targetCenterX = rect.left + (rect.width / 2);
+
+    if (step.targetId === 'btn-bottom-action') {
+      // Above the bottom action button
+      balloonTop = Math.max(20, rect.top - balloonHeight - 16);
+      balloonLeft = Math.max(20, Math.min(window.innerWidth - balloonWidth - 20, rect.right - balloonWidth));
+    } else if (step.targetId === 'feed-chat') {
+      // Top right within chat container
+      balloonTop = Math.max(80, rect.top + 24);
+      balloonLeft = Math.max(20, rect.right - balloonWidth - 24);
+    } else if (step.targetId === 'input-quick-speak') {
+      // Above the quick speak input bar
+      balloonTop = Math.max(20, rect.top - balloonHeight - 16);
+      balloonLeft = Math.max(20, rect.left);
+    } else if (step.targetId === 'btn-user-menu') {
+      // Underneath user menu avatar at top right
+      balloonTop = rect.bottom + 14;
+      balloonLeft = Math.max(20, window.innerWidth - balloonWidth - 24);
+    } else if (targetCenterX < screenMidX) {
+      // Target is on LEFT half (e.g. col-user) -> place balloon on RIGHT side!
+      if (window.innerWidth - rect.right >= balloonWidth + 32) {
+        balloonLeft = rect.right + 24;
+        balloonTop = Math.max(80, Math.min(window.innerHeight - balloonHeight - 30, rect.top + 40));
+      } else {
+        balloonLeft = (window.innerWidth - balloonWidth) / 2;
+        balloonTop = window.innerHeight - balloonHeight - 24;
+      }
+    } else {
+      // Target is on RIGHT half (e.g. col-meeting) -> place balloon on LEFT side!
+      if (rect.left >= balloonWidth + 32) {
+        balloonLeft = rect.left - balloonWidth - 24;
+        balloonTop = Math.max(80, Math.min(window.innerHeight - balloonHeight - 30, rect.top + 40));
+      } else {
+        balloonLeft = (window.innerWidth - balloonWidth) / 2;
+        balloonTop = window.innerHeight - balloonHeight - 24;
+      }
+    }
+
+    // Viewport bounds clamp
+    balloonTop = Math.max(20, Math.min(window.innerHeight - balloonHeight - 16, balloonTop));
+    balloonLeft = Math.max(16, Math.min(window.innerWidth - balloonWidth - 16, balloonLeft));
+
+    balloon.style.top = `${balloonTop}px`;
+    balloon.style.left = `${balloonLeft}px`;
   }
 }
+
+// Window resize & scroll listeners for dynamic positioning
+window.addEventListener('resize', () => {
+  const overlay = document.getElementById('tour-overlay');
+  if (overlay && !overlay.classList.contains('hidden')) {
+    renderTourStep();
+  }
+});
+window.addEventListener('scroll', () => {
+  const overlay = document.getElementById('tour-overlay');
+  if (overlay && !overlay.classList.contains('hidden')) {
+    renderTourStep();
+  }
+});
 
 // -------------------------------------------------------------
 // 8. Initialization
