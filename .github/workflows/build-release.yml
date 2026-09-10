@@ -1,0 +1,124 @@
+name: Build and Release Parrot
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g. v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+
+permissions:
+  contents: write
+
+jobs:
+  build-macos:
+    name: Build macOS (.dmg & .zip)
+    runs-on: macos-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build macOS App Bundle
+        run: |
+          # Verify local Parrot.app bundle or package standalone
+          if [ -d "Parrot.app" ]; then
+            chmod +x Parrot.app/Contents/MacOS/*
+            zip -r -y "Parrot-macOS.zip" Parrot.app
+            
+            # Create DMG using native macOS hdiutil
+            mkdir -p dmg_root
+            cp -R Parrot.app dmg_root/
+            ln -s /Applications dmg_root/Applications
+            hdiutil create -volname "Parrot" -srcfolder dmg_root -ov -format UDZO "Parrot-macOS.dmg"
+          else
+            echo "Packaging with PyInstaller..."
+            pyinstaller --name "Parrot" --windowed --icon "assets/icon.png" main.py
+            zip -r "Parrot-macOS.zip" dist/Parrot.app
+            hdiutil create -volname "Parrot" -srcfolder dist/Parrot.app -ov -format UDZO "Parrot-macOS.dmg"
+          fi
+
+      - name: Upload macOS Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-binaries
+          path: |
+            Parrot-macOS.dmg
+            Parrot-macOS.zip
+
+  build-windows:
+    name: Build Windows (.exe)
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build Windows Standalone Executable
+        run: |
+          pyinstaller --noconfirm --onedir --windowed --name "Parrot" --add-data "src;src" --add-data "assets;assets" main.py
+          Compress-Archive -Path dist/Parrot/* -DestinationPath Parrot-Windows-x64.zip
+
+      - name: Upload Windows Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-binaries
+          path: Parrot-Windows-x64.zip
+
+  release:
+    name: Create GitHub Release
+    needs: [build-macos, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Download macOS Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-binaries
+          path: release_assets
+
+      - name: Download Windows Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-binaries
+          path: release_assets
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            release_assets/Parrot-macOS.dmg
+            release_assets/Parrot-macOS.zip
+            release_assets/Parrot-Windows-x64.zip
+          draft: false
+          prerelease: false
+          generate_release_notes: true
