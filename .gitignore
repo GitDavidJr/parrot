@@ -8,3 +8,5 @@ dist/
 *.spec
 .env
 .DS_Store
+Icon?
+Icon*
