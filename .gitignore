@@ -2,5 +2,9 @@
 __pycache__/
 *.pyc
 *.log
+src/native/bin/
+build/
+dist/
+*.spec
 .env
 .DS_Store

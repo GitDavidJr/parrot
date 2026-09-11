@@ -32,26 +32,43 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pyinstaller
+          pip install pyinstaller pillow
+
+      - name: Build native system audio helper
+        run: |
+          mkdir -p src/native/bin
+          ARCH="$(uname -m)"
+          xcrun swiftc src/native/macos/SystemAudioCapture.swift \
+            -parse-as-library -O -target "${ARCH}-apple-macos13.0" \
+            -framework ScreenCaptureKit -framework AVFoundation -framework CoreMedia \
+            -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __info_plist \
+            -Xlinker src/native/macos/HelperInfo.plist \
+            -o src/native/bin/parrot-system-audio
+          codesign --force --sign - src/native/bin/parrot-system-audio
 
       - name: Build macOS App Bundle
         run: |
-          # Verify local Parrot.app bundle or package standalone
-          if [ -d "Parrot.app" ]; then
-            chmod +x Parrot.app/Contents/MacOS/*
-            zip -r -y "Parrot-macOS.zip" Parrot.app
-            
-            # Create DMG using native macOS hdiutil
-            mkdir -p dmg_root
-            cp -R Parrot.app dmg_root/
-            ln -s /Applications dmg_root/Applications
-            hdiutil create -volname "Parrot" -srcfolder dmg_root -ov -format UDZO "Parrot-macOS.dmg"
-          else
-            echo "Packaging with PyInstaller..."
-            pyinstaller --name "Parrot" --windowed --icon "assets/icon.png" main.py
-            zip -r "Parrot-macOS.zip" dist/Parrot.app
-            hdiutil create -volname "Parrot" -srcfolder dist/Parrot.app -ov -format UDZO "Parrot-macOS.dmg"
-          fi
+          pyinstaller --noconfirm --clean --name "Parrot" --windowed \
+            --icon "assets/AppIcon.icns" \
+            --add-data "src/ui:src/ui" \
+            --add-data "assets:assets" \
+            --add-binary "src/native/bin/parrot-system-audio:src/native/bin" \
+            --collect-all webview \
+            --collect-all sounddevice \
+            --collect-all soundfile \
+            --collect-all uvicorn \
+            main.py
+
+          /usr/libexec/PlistBuddy -c "Add :NSMicrophoneUsageDescription string O Parrot usa o microfone para traduzir sua voz." dist/Parrot.app/Contents/Info.plist || true
+          /usr/libexec/PlistBuddy -c "Add :NSAudioCaptureUsageDescription string O Parrot captura o áudio reproduzido para traduzir falas em tempo real." dist/Parrot.app/Contents/Info.plist || true
+          /usr/libexec/PlistBuddy -c "Add :NSScreenCaptureUsageDescription string O Parrot usa a captura do sistema somente para receber áudio." dist/Parrot.app/Contents/Info.plist || true
+          codesign --force --deep --sign - dist/Parrot.app
+
+          ditto -c -k --sequesterRsrc --keepParent dist/Parrot.app Parrot-macOS.zip
+          mkdir -p dmg_root
+          cp -R dist/Parrot.app dmg_root/
+          ln -s /Applications dmg_root/Applications
+          hdiutil create -volname "Parrot" -srcfolder dmg_root -ov -format UDZO "Parrot-macOS.dmg"
 
       - name: Upload macOS Artifacts
         uses: actions/upload-artifact@v4
@@ -78,11 +95,20 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pyinstaller
+          pip install pyinstaller pillow
 
       - name: Build Windows Standalone Executable
         run: |
-          pyinstaller --noconfirm --onedir --windowed --name "Parrot" --add-data "src;src" --add-data "assets;assets" main.py
+          pyinstaller --noconfirm --clean --onedir --windowed --name "Parrot" `
+            --icon "assets/icon.ico" `
+            --add-data "src/ui;src/ui" `
+            --add-data "assets;assets" `
+            --collect-all webview `
+            --collect-all sounddevice `
+            --collect-all soundfile `
+            --collect-all soundcard `
+            --collect-all uvicorn `
+            main.py
           Compress-Archive -Path dist/Parrot/* -DestinationPath Parrot-Windows-x64.zip
 
       - name: Upload Windows Artifacts
@@ -113,8 +139,9 @@ jobs:
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
         with:
+          tag_name: ${{ github.event.inputs.version || github.ref_name }}
+          name: Parrot ${{ github.event.inputs.version || github.ref_name }}
           files: |
             release_assets/Parrot-macOS.dmg
             release_assets/Parrot-macOS.zip

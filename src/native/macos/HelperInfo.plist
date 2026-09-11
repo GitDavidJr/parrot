@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleIdentifier</key>
+    <string>com.davidjunior.parrot.system-audio</string>
+    <key>CFBundleName</key>
+    <string>Parrot System Audio</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>NSAudioCaptureUsageDescription</key>
+    <string>O Parrot captura o áudio reproduzido no computador para traduzir falas em tempo real.</string>
+    <key>NSScreenCaptureUsageDescription</key>
+    <string>O Parrot usa a captura do sistema somente para receber o áudio que será traduzido.</string>
+</dict>
+</plist>

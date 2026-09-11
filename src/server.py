@@ -1,5 +1,3 @@
-import os
-from pathlib import Path
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -7,16 +5,22 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Dict, Any
 
-from src.config import settings
+from src.config import settings, RESOURCE_DIR
 from src.service import parrot_service
 from src.audio.devices import get_audio_devices
 from src.audio.player import audio_player
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = RESOURCE_DIR
 ASSETS_DIR = BASE_DIR / "assets"
 UI_DIR = BASE_DIR / "src" / "ui"
 
 app = FastAPI(title="Parrot — Live Call Voice Translator")
+
+
+def client_settings() -> Dict[str, Any]:
+    data = settings.model_dump(exclude={"openai_api_key"})
+    data["openai_api_key_configured"] = bool(settings.openai_api_key)
+    return data
 
 app.add_middleware(
     CORSMiddleware,
@@ -72,10 +76,16 @@ async def get_status():
         "target_lang": settings.target_lang,
         "devices": {
             "input": parrot_service.input_device_id,
+            "meeting_input": parrot_service.meeting_device_id,
             "virtual_output": parrot_service.virtual_output_device_id,
             "headphones": parrot_service.headphones_device_id,
         },
-        "settings": settings.model_dump(),
+        "system_audio": {
+            "enabled": settings.system_audio_capture,
+            "backend": parrot_service.meeting_recorder.active_backend,
+            "error": parrot_service.meeting_recorder.last_error,
+        },
+        "settings": client_settings(),
         "history_count": len(parrot_service.history),
     }
 
@@ -90,7 +100,12 @@ async def list_devices():
 @app.post("/api/start")
 async def start_session():
     await parrot_service.start_session()
-    return {"success": True, "status": parrot_service.status}
+    return {
+        "success": True,
+        "status": parrot_service.status,
+        "system_audio_backend": parrot_service.meeting_recorder.active_backend,
+        "system_audio_error": parrot_service.meeting_recorder.last_error,
+    }
 
 @app.post("/api/stop")
 async def stop_session():
@@ -100,7 +115,7 @@ async def stop_session():
 @app.post("/api/settings")
 async def update_settings(payload: Dict[str, Any]):
     parrot_service.update_settings(payload)
-    return {"success": True, "settings": settings.model_dump()}
+    return {"success": True, "settings": client_settings()}
 
 @app.post("/api/quick-speak")
 async def quick_speak(payload: QuickSpeakRequest):
@@ -131,7 +146,7 @@ async def test_audio(payload: TestAudioRequest):
 
 @app.post("/api/preview-voice")
 async def preview_voice_endpoint(payload: PreviewVoiceRequest):
-    target_device = parrot_service.headphones_device_id or parrot_service.virtual_output_device_id
+    target_device = parrot_service.headphones_device_id if parrot_service.headphones_device_id is not None else parrot_service.virtual_output_device_id
     if target_device is None:
         raise HTTPException(status_code=400, detail="Dispositivo de saída não encontrado.")
 
@@ -160,7 +175,7 @@ async def websocket_endpoint(websocket: WebSocket):
             "data": {
                 "status": parrot_service.status,
                 "is_active": parrot_service.is_active,
-                "settings": settings.model_dump(),
+                "settings": client_settings(),
                 "history": parrot_service.history[-30:],
                 "devices": get_audio_devices(),
             }

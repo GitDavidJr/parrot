@@ -1,4 +1,5 @@
 import sounddevice as sd
+import sys
 from typing import Dict, List, Any
 
 def get_audio_devices() -> Dict[str, Any]:
@@ -16,7 +17,8 @@ def get_audio_devices() -> Dict[str, Any]:
     virtual_devices: List[Dict[str, Any]] = []
     output_devices: List[Dict[str, Any]] = []
 
-    perssua_id = None
+    virtual_output_id = None
+    virtual_input_id = None
     best_mic_id = None
     best_headphone_id = None
 
@@ -36,23 +38,30 @@ def get_audio_devices() -> Dict[str, Any]:
             "sample_rate": sr,
         }
 
-        # Check if virtual device (Perssua / BlackHole)
-        is_perssua = "perssua" in name.lower() or "blackhole" in name.lower()
-        if is_perssua and out_ch > 0:
+        # Virtual cables used to inject translated speech into call apps.
+        lower_name = name.lower()
+        virtual_markers = (
+            "perssua", "blackhole", "cable input", "cable output",
+            "vb-audio", "voicemeeter input", "voicemeeter output",
+        )
+        is_virtual = any(marker in lower_name for marker in virtual_markers)
+        if is_virtual and out_ch > 0:
             virtual_devices.append(item)
-            if perssua_id is None:
-                perssua_id = i
+            if virtual_output_id is None:
+                virtual_output_id = i
 
         if in_ch > 0:
             meeting_devices.append(item)
-            if not is_perssua:
+            if is_virtual and virtual_input_id is None:
+                virtual_input_id = i
+            if not is_virtual:
                 input_devices.append(item)
                 # Prefer external mic or default mic
                 if "externo" in name.lower() or i == default_in:
                     if best_mic_id is None or "externo" in name.lower():
                         best_mic_id = i
 
-        if out_ch > 0 and not is_perssua:
+        if out_ch > 0 and not is_virtual:
             output_devices.append(item)
             if "fone" in name.lower() or "headphone" in name.lower() or i == default_out:
                 if best_headphone_id is None or "fone" in name.lower():
@@ -64,9 +73,11 @@ def get_audio_devices() -> Dict[str, Any]:
     if best_headphone_id is None and output_devices:
         best_headphone_id = output_devices[0]["id"]
 
-    # Fallback for virtual device if Perssua isn't named explicitly
-    if perssua_id is None and virtual_devices:
-        perssua_id = virtual_devices[0]["id"]
+    # Duplex drivers such as Perssua may use one device ID for both directions.
+    if virtual_input_id is None and virtual_output_id is not None:
+        output_item = next((item for item in virtual_devices if item["id"] == virtual_output_id), None)
+        if output_item and output_item["inputs"] > 0:
+            virtual_input_id = virtual_output_id
 
     return {
         "inputs": input_devices,
@@ -75,8 +86,14 @@ def get_audio_devices() -> Dict[str, Any]:
         "outputs": output_devices,
         "recommended": {
             "mic_id": best_mic_id,
-            "virtual_mic_id": perssua_id,
-            "meeting_device_id": perssua_id or best_mic_id,
+            "virtual_mic_id": virtual_output_id,
+            "virtual_input_id": virtual_input_id,
+            "meeting_device_id": virtual_input_id,
             "headphones_id": best_headphone_id,
+        },
+        "platform": sys.platform,
+        "system_audio": {
+            "recommended_backend": "screencapturekit" if sys.platform == "darwin" else "wasapi" if sys.platform == "win32" else "loopback",
+            "native_available": sys.platform in {"darwin", "win32"},
         },
     }

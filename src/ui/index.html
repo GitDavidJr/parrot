@@ -239,7 +239,7 @@
       <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-3">
         <div>
           <h3 class="font-bold text-base text-slate-900 dark:text-white">Configurar Idiomas & Áudio</h3>
-          <p class="text-xs text-slate-500 dark:text-slate-400">Defina o que você fala, como a chamada ouve e o microfone.</p>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Configure a dublagem do áudio do computador e sua voz na chamada.</p>
         </div>
         <button onclick="closeConfigModal()" class="cursor-pointer p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -308,18 +308,58 @@
         <div class="bg-slate-50 dark:bg-slate-900 p-3.5 rounded-lg border border-slate-200 dark:border-slate-700 space-y-3">
           <div class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
             <span class="w-2 h-2 rounded-full bg-sky-500"></span>
-            <span>Dispositivos de Entrada (Você & Reunião)</span>
+            <span>Dispositivos de Áudio</span>
           </div>
           <div>
             <label class="block font-medium text-slate-600 dark:text-slate-400 mb-1">Seu Microfone Físico (Você fala em PT):</label>
             <select id="sel-input-mic" class="cursor-pointer w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md p-2 text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"></select>
           </div>
           <div>
-            <label class="block font-medium text-slate-600 dark:text-slate-400 mb-1">Áudio da Reunião / Discord (Estrangeiros falam em EN):</label>
+            <label class="block font-medium text-slate-600 dark:text-slate-400 mb-1">Dispositivo virtual de contingência:</label>
             <select id="sel-meeting-mic" class="cursor-pointer w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md p-2 text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"></select>
             <p class="text-[10px] text-slate-400 mt-1 leading-normal">
-              💡 <strong>Como funciona no Discord:</strong> Em <em>Configurações do Discord ➔ Voz & Vídeo</em>, coloque a <strong>Saída (Output)</strong> no <strong>Perssua</strong> (ou Dispositivo com Saída Múltipla) para o Parrot capturar e traduzir as vozes dos gringos automaticamente!
+              Usado apenas quando a captura nativa do sistema não estiver disponível.
             </p>
+          </div>
+          <div>
+            <label class="block font-medium text-slate-600 dark:text-slate-400 mb-1">Onde você ouvirá a voz traduzida:</label>
+            <select id="sel-headphones" class="cursor-pointer w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md p-2 text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"></select>
+          </div>
+          <div>
+            <label class="block font-medium text-slate-600 dark:text-slate-400 mb-1">Cabo virtual que envia sua voz à chamada:</label>
+            <select id="sel-virtual-output" class="cursor-pointer w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md p-2 text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"></select>
+            <p class="text-[10px] text-slate-400 mt-1 leading-normal">Perssua/BlackHole no macOS ou VB-CABLE/VoiceMeeter no Windows.</p>
+          </div>
+        </div>
+
+        <!-- Dublagem do áudio do computador -->
+        <div class="bg-sky-50/60 dark:bg-sky-950/25 p-3.5 rounded-lg border border-sky-200 dark:border-sky-800 space-y-3">
+          <div class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+            <span>🎙️</span>
+            <span>Dublagem do Áudio do Computador (Inglês ➔ Português)</span>
+          </div>
+          <label class="cursor-pointer flex items-start justify-between gap-3">
+            <div>
+              <span class="block font-semibold text-slate-800 dark:text-slate-200">Capturar todo áudio reproduzido</span>
+              <span class="text-[11px] text-slate-500 dark:text-slate-400">Funciona com Meet, Zoom, Discord, navegador e vídeos sem mudar a saída deles.</span>
+            </div>
+            <input type="checkbox" id="modal-chk-system-audio" class="mt-0.5 cursor-pointer w-4 h-4 text-sky-600 rounded border-slate-300 focus:ring-sky-500 shrink-0" />
+          </label>
+          <label class="cursor-pointer flex items-start justify-between gap-3">
+            <div>
+              <span class="block font-semibold text-slate-800 dark:text-slate-200">Falar tradução por cima do original</span>
+              <span class="text-[11px] text-slate-500 dark:text-slate-400">Mantém o áudio original e adiciona a voz portuguesa com atraso de tradução.</span>
+            </div>
+            <input type="checkbox" id="modal-chk-dub-system" class="mt-0.5 cursor-pointer w-4 h-4 text-sky-600 rounded border-slate-300 focus:ring-sky-500 shrink-0" />
+          </label>
+          <div>
+            <label class="block font-medium text-slate-600 dark:text-slate-400 mb-1">Método de captura:</label>
+            <select id="sel-system-backend" class="cursor-pointer w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md p-2 text-slate-900 dark:text-white focus:outline-none focus:border-sky-500">
+              <option value="auto">Automático (recomendado)</option>
+              <option value="screencapturekit">Nativo macOS (ScreenCaptureKit)</option>
+              <option value="wasapi">Nativo Windows (WASAPI)</option>
+              <option value="virtual_device">Perssua / BlackHole / cabo virtual</option>
+            </select>
           </div>
         </div>
 
@@ -372,6 +412,10 @@
                 <option value="700">700ms (Pausas Longas)</option>
               </select>
             </div>
+          </div>
+          <div>
+            <label class="block font-medium text-slate-600 dark:text-slate-400 mb-1">Chave OpenAI:</label>
+            <input id="input-openai-key" type="password" autocomplete="off" placeholder="Já configurada — deixe vazio para manter" class="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md p-2 text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500" />
           </div>
         </div>
 
@@ -852,7 +896,13 @@ async function toggleSession() {
     if (res.ok && data.success) {
       currentStatus.is_active = willStart;
       currentStatus.status = data.status || (willStart ? 'listening' : 'idle');
-      updateStatusPill(currentStatus.status, willStart ? 'Ouvindo microfone...' : 'Inativo');
+      const captureLabel = data.system_audio_backend && data.system_audio_backend !== 'idle'
+        ? `Capturando computador via ${data.system_audio_backend}`
+        : 'Ouvindo microfone...';
+      updateStatusPill(currentStatus.status, willStart ? captureLabel : 'Inativo');
+      if (willStart && data.system_audio_error) {
+        alert(`A captura nativa não iniciou. O Parrot tentou a contingência: ${data.system_audio_error}`);
+      }
       
       // Notify WS
       if (ws && ws.readyState === WebSocket.OPEN) {
@@ -1018,6 +1068,9 @@ function closeConfigModal() {
 function populateConfigModal(devices, setts) {
   const selMic = document.getElementById('sel-input-mic');
   const selMeetingMic = document.getElementById('sel-meeting-mic');
+  const selHeadphones = document.getElementById('sel-headphones');
+  const selVirtualOutput = document.getElementById('sel-virtual-output');
+  const selSystemBackend = document.getElementById('sel-system-backend');
   const selModel = document.getElementById('sel-openai-model');
   const selVoice = document.getElementById('sel-call-voice');
   const selSource = document.getElementById('sel-source-lang');
@@ -1044,11 +1097,39 @@ function populateConfigModal(devices, setts) {
       list.forEach(d => {
         const opt = document.createElement('option');
         opt.value = d.id;
-        opt.textContent = `${d.name}${d.name.toLowerCase().includes('perssua') ? ' (Recomendado para Discord/Meet)' : ''}`;
+        opt.textContent = `${d.name}${d.id === devices.recommended.meeting_device_id ? ' (contingência recomendada)' : ''}`;
         if (d.id === chosenMeeting) opt.selected = true;
         selMeetingMic.appendChild(opt);
       });
     }
+  }
+
+  if (devices && devices.outputs && selHeadphones) {
+    selHeadphones.innerHTML = '';
+    const chosenOutput = setts.headphones_device_id ?? devices.recommended.headphones_id;
+    devices.outputs.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d.id;
+      opt.textContent = d.name;
+      if (d.id === chosenOutput) opt.selected = true;
+      selHeadphones.appendChild(opt);
+    });
+  }
+
+  if (devices && selVirtualOutput) {
+    selVirtualOutput.innerHTML = '';
+    const noCable = document.createElement('option');
+    noCable.value = '';
+    noCable.textContent = 'Nenhum cabo virtual detectado';
+    selVirtualOutput.appendChild(noCable);
+    const chosenVirtual = setts.virtual_output_device_id ?? devices.recommended.virtual_mic_id;
+    (devices.virtual_outputs || []).forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d.id;
+      opt.textContent = d.name;
+      if (d.id === chosenVirtual) opt.selected = true;
+      selVirtualOutput.appendChild(opt);
+    });
   }
 
   if (selModel && setts.openai_model) selModel.value = setts.openai_model;
@@ -1056,6 +1137,24 @@ function populateConfigModal(devices, setts) {
   if (selSource && setts.source_lang) selSource.value = setts.source_lang;
   if (selTarget && setts.target_lang) selTarget.value = setts.target_lang;
   if (selPause && setts.vad_silence_threshold_ms) selPause.value = String(setts.vad_silence_threshold_ms);
+  if (selSystemBackend) {
+    const nativeBackend = devices && devices.platform === 'win32' ? 'wasapi' : 'screencapturekit';
+    const nativeLabel = nativeBackend === 'wasapi' ? 'Nativo Windows (WASAPI)' : 'Nativo macOS (ScreenCaptureKit)';
+    selSystemBackend.innerHTML = '';
+    [['auto', 'Automático (recomendado)'], [nativeBackend, nativeLabel], ['virtual_device', 'Perssua / BlackHole / cabo virtual']].forEach(([value, label]) => {
+      const opt = document.createElement('option');
+      opt.value = value;
+      opt.textContent = label;
+      selSystemBackend.appendChild(opt);
+    });
+    const configuredBackend = setts.system_audio_backend || 'auto';
+    selSystemBackend.value = [...selSystemBackend.options].some(opt => opt.value === configuredBackend) ? configuredBackend : 'auto';
+  }
+
+  const chkSystemAudio = document.getElementById('modal-chk-system-audio');
+  const chkDubSystem = document.getElementById('modal-chk-dub-system');
+  if (chkSystemAudio) chkSystemAudio.checked = setts.system_audio_capture !== false;
+  if (chkDubSystem) chkDubSystem.checked = setts.dub_system_audio !== false;
 
   const mode = setts.capture_mode || 'vad';
   const radioVad = document.getElementById('radio-mode-vad');
@@ -1113,25 +1212,39 @@ async function previewCurrentVoice(overrideVoice) {
 async function saveConfigModal() {
   const selMic = document.getElementById('sel-input-mic');
   const selMeetingMic = document.getElementById('sel-meeting-mic');
+  const selHeadphones = document.getElementById('sel-headphones');
+  const selVirtualOutput = document.getElementById('sel-virtual-output');
+  const selSystemBackend = document.getElementById('sel-system-backend');
   const selModel = document.getElementById('sel-openai-model');
   const selVoice = document.getElementById('sel-call-voice');
   const selSource = document.getElementById('sel-source-lang');
   const selTarget = document.getElementById('sel-target-lang');
   const selPause = document.getElementById('sel-silence-pause');
   const chkMonitor = document.getElementById('modal-chk-headphones-monitor');
+  const chkSystemAudio = document.getElementById('modal-chk-system-audio');
+  const chkDubSystem = document.getElementById('modal-chk-dub-system');
+  const inputOpenAIKey = document.getElementById('input-openai-key');
   const selCaptureMode = document.querySelector('input[name="modal_capture_mode"]:checked');
 
   const payload = {
     input_device_id: parseInt(selMic.value),
     meeting_device_id: selMeetingMic ? parseInt(selMeetingMic.value) : undefined,
+    headphones_device_id: selHeadphones && selHeadphones.value !== '' ? parseInt(selHeadphones.value) : null,
+    virtual_output_device_id: selVirtualOutput && selVirtualOutput.value !== '' ? parseInt(selVirtualOutput.value) : null,
     openai_model: selModel.value,
     openai_voice: selVoice.value,
     source_lang: selSource.value,
     target_lang: selTarget.value,
     vad_silence_threshold_ms: parseInt(selPause.value),
     play_translated_to_headphones: chkMonitor ? chkMonitor.checked : false,
-    capture_mode: selCaptureMode ? selCaptureMode.value : 'vad'
+    capture_mode: selCaptureMode ? selCaptureMode.value : 'vad',
+    system_audio_capture: chkSystemAudio ? chkSystemAudio.checked : true,
+    dub_system_audio: chkDubSystem ? chkDubSystem.checked : true,
+    system_audio_backend: selSystemBackend ? selSystemBackend.value : 'auto'
   };
+  if (inputOpenAIKey && inputOpenAIKey.value.trim()) {
+    payload.openai_api_key = inputOpenAIKey.value.trim();
+  }
 
   const res = await fetch('/api/settings', {
     method: 'POST',
@@ -1183,7 +1296,7 @@ const tourSteps = [
   {
     targetId: 'btn-user-menu',
     title: '4. Menu e Ajustes de Áudio',
-    desc: 'Neste menu você ajusta idiomas, vozes e microfones. No seu Google Meet, Zoom ou Discord, selecione o microfone da chamada como "Perssua"!'
+    desc: 'Neste menu você ajusta idiomas, vozes e dispositivos. Na chamada, selecione Perssua/BlackHole no macOS ou CABLE Output/VoiceMeeter Output no Windows como microfone.'
   }
 ];
 

@@ -7,8 +7,8 @@ import uvicorn
 import webbrowser
 from pathlib import Path
 
-# Add project root to sys.path
-BASE_DIR = Path(__file__).resolve().parent
+# Add project root to sys.path (PyInstaller extracts resources into _MEIPASS).
+BASE_DIR = Path(sys._MEIPASS) if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS") else Path(__file__).resolve().parent
 sys.path.insert(0, str(BASE_DIR))
 
 from src.config import settings
@@ -80,7 +80,8 @@ def main():
     # If user explicitly specifies --web, open browser
     if "--web" in sys.argv or "--server-only" in sys.argv:
         print(f"[+] Modo Web ativado: http://{HOST}:{PORT}")
-        webbrowser.open(f"http://{HOST}:{PORT}")
+        if "--web" in sys.argv:
+            webbrowser.open(f"http://{HOST}:{PORT}")
         try:
             while True:
                 time.sleep(1)

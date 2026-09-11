@@ -384,7 +384,13 @@ async function toggleSession() {
     if (res.ok && data.success) {
       currentStatus.is_active = willStart;
       currentStatus.status = data.status || (willStart ? 'listening' : 'idle');
-      updateStatusPill(currentStatus.status, willStart ? 'Ouvindo microfone...' : 'Inativo');
+      const captureLabel = data.system_audio_backend && data.system_audio_backend !== 'idle'
+        ? `Capturando computador via ${data.system_audio_backend}`
+        : 'Ouvindo microfone...';
+      updateStatusPill(currentStatus.status, willStart ? captureLabel : 'Inativo');
+      if (willStart && data.system_audio_error) {
+        alert(`A captura nativa não iniciou. O Parrot tentou a contingência: ${data.system_audio_error}`);
+      }
       
       // Notify WS
       if (ws && ws.readyState === WebSocket.OPEN) {
@@ -481,21 +487,6 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-// Quick Speak Text
-async function handleQuickSpeak(e) {
-  e.preventDefault();
-  const input = document.getElementById('input-quick-speak');
-  const text = input.value.trim();
-  if (!text) return;
-  input.value = '';
-
-  await fetch('/api/quick-speak', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text })
-  });
-}
-
 // Simulate Meeting Speech
 async function simulateSpeech(text) {
   await fetch('/api/simulate-incoming', {
@@ -563,6 +554,9 @@ function closeConfigModal() {
 function populateConfigModal(devices, setts) {
   const selMic = document.getElementById('sel-input-mic');
   const selMeetingMic = document.getElementById('sel-meeting-mic');
+  const selHeadphones = document.getElementById('sel-headphones');
+  const selVirtualOutput = document.getElementById('sel-virtual-output');
+  const selSystemBackend = document.getElementById('sel-system-backend');
   const selModel = document.getElementById('sel-openai-model');
   const selVoice = document.getElementById('sel-call-voice');
   const selSource = document.getElementById('sel-source-lang');
@@ -589,11 +583,39 @@ function populateConfigModal(devices, setts) {
       list.forEach(d => {
         const opt = document.createElement('option');
         opt.value = d.id;
-        opt.textContent = `${d.name}${d.name.toLowerCase().includes('perssua') ? ' (Recomendado para Discord/Meet)' : ''}`;
+        opt.textContent = `${d.name}${d.id === devices.recommended.meeting_device_id ? ' (contingência recomendada)' : ''}`;
         if (d.id === chosenMeeting) opt.selected = true;
         selMeetingMic.appendChild(opt);
       });
     }
+  }
+
+  if (devices && devices.outputs && selHeadphones) {
+    selHeadphones.innerHTML = '';
+    const chosenOutput = setts.headphones_device_id ?? devices.recommended.headphones_id;
+    devices.outputs.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d.id;
+      opt.textContent = d.name;
+      if (d.id === chosenOutput) opt.selected = true;
+      selHeadphones.appendChild(opt);
+    });
+  }
+
+  if (devices && selVirtualOutput) {
+    selVirtualOutput.innerHTML = '';
+    const noCable = document.createElement('option');
+    noCable.value = '';
+    noCable.textContent = 'Nenhum cabo virtual detectado';
+    selVirtualOutput.appendChild(noCable);
+    const chosenVirtual = setts.virtual_output_device_id ?? devices.recommended.virtual_mic_id;
+    (devices.virtual_outputs || []).forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d.id;
+      opt.textContent = d.name;
+      if (d.id === chosenVirtual) opt.selected = true;
+      selVirtualOutput.appendChild(opt);
+    });
   }
 
   if (selModel && setts.openai_model) selModel.value = setts.openai_model;
@@ -601,6 +623,32 @@ function populateConfigModal(devices, setts) {
   if (selSource && setts.source_lang) selSource.value = setts.source_lang;
   if (selTarget && setts.target_lang) selTarget.value = setts.target_lang;
   if (selPause && setts.vad_silence_threshold_ms) selPause.value = String(setts.vad_silence_threshold_ms);
+  if (selSystemBackend) {
+    const nativeBackend = devices && devices.platform === 'win32' ? 'wasapi' : 'screencapturekit';
+    const nativeLabel = nativeBackend === 'wasapi' ? 'Nativo Windows (WASAPI)' : 'Nativo macOS (ScreenCaptureKit)';
+    selSystemBackend.innerHTML = '';
+    [['auto', 'Automático (recomendado)'], [nativeBackend, nativeLabel], ['virtual_device', 'Perssua / BlackHole / cabo virtual']].forEach(([value, label]) => {
+      const opt = document.createElement('option');
+      opt.value = value;
+      opt.textContent = label;
+      selSystemBackend.appendChild(opt);
+    });
+    const configuredBackend = setts.system_audio_backend || 'auto';
+    selSystemBackend.value = [...selSystemBackend.options].some(opt => opt.value === configuredBackend) ? configuredBackend : 'auto';
+  }
+
+  const chkSystemAudio = document.getElementById('modal-chk-system-audio');
+  const chkDubSystem = document.getElementById('modal-chk-dub-system');
+  if (chkSystemAudio) chkSystemAudio.checked = setts.system_audio_capture !== false;
+  if (chkDubSystem) chkDubSystem.checked = setts.dub_system_audio !== false;
+
+  const mode = setts.capture_mode || 'vad';
+  const radioVad = document.getElementById('radio-mode-vad');
+  const radioPtt = document.getElementById('radio-mode-ptt');
+  if (radioVad && radioPtt) {
+    if (mode === 'ptt') radioPtt.checked = true;
+    else radioVad.checked = true;
+  }
 
   const chkMonitor = document.getElementById('modal-chk-headphones-monitor');
   if (chkMonitor) chkMonitor.checked = Boolean(setts.play_translated_to_headphones);
@@ -650,25 +698,39 @@ async function previewCurrentVoice(overrideVoice) {
 async function saveConfigModal() {
   const selMic = document.getElementById('sel-input-mic');
   const selMeetingMic = document.getElementById('sel-meeting-mic');
+  const selHeadphones = document.getElementById('sel-headphones');
+  const selVirtualOutput = document.getElementById('sel-virtual-output');
+  const selSystemBackend = document.getElementById('sel-system-backend');
   const selModel = document.getElementById('sel-openai-model');
   const selVoice = document.getElementById('sel-call-voice');
   const selSource = document.getElementById('sel-source-lang');
   const selTarget = document.getElementById('sel-target-lang');
   const selPause = document.getElementById('sel-silence-pause');
   const chkMonitor = document.getElementById('modal-chk-headphones-monitor');
+  const chkSystemAudio = document.getElementById('modal-chk-system-audio');
+  const chkDubSystem = document.getElementById('modal-chk-dub-system');
+  const inputOpenAIKey = document.getElementById('input-openai-key');
   const selCaptureMode = document.querySelector('input[name="modal_capture_mode"]:checked');
 
   const payload = {
     input_device_id: parseInt(selMic.value),
     meeting_device_id: selMeetingMic ? parseInt(selMeetingMic.value) : undefined,
+    headphones_device_id: selHeadphones && selHeadphones.value !== '' ? parseInt(selHeadphones.value) : null,
+    virtual_output_device_id: selVirtualOutput && selVirtualOutput.value !== '' ? parseInt(selVirtualOutput.value) : null,
     openai_model: selModel.value,
     openai_voice: selVoice.value,
     source_lang: selSource.value,
     target_lang: selTarget.value,
     vad_silence_threshold_ms: parseInt(selPause.value),
     play_translated_to_headphones: chkMonitor ? chkMonitor.checked : false,
-    capture_mode: selCaptureMode ? selCaptureMode.value : 'vad'
+    capture_mode: selCaptureMode ? selCaptureMode.value : 'vad',
+    system_audio_capture: chkSystemAudio ? chkSystemAudio.checked : true,
+    dub_system_audio: chkDubSystem ? chkDubSystem.checked : true,
+    system_audio_backend: selSystemBackend ? selSystemBackend.value : 'auto'
   };
+  if (inputOpenAIKey && inputOpenAIKey.value.trim()) {
+    payload.openai_api_key = inputOpenAIKey.value.trim();
+  }
 
   const res = await fetch('/api/settings', {
     method: 'POST',
@@ -720,7 +782,7 @@ const tourSteps = [
   {
     targetId: 'btn-user-menu',
     title: '4. Menu e Ajustes de Áudio',
-    desc: 'Neste menu você ajusta idiomas, vozes e microfones. No seu Google Meet, Zoom ou Discord, selecione o microfone da chamada como "Perssua"!'
+    desc: 'Neste menu você ajusta idiomas, vozes e dispositivos. Na chamada, selecione Perssua/BlackHole no macOS ou CABLE Output/VoiceMeeter Output no Windows como microfone.'
   }
 ];
 

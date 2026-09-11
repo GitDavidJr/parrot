@@ -17,6 +17,7 @@ class AudioRecorder:
         silence_threshold_ms: int = 300,
         min_speech_duration_ms: int = 350,
         max_phrase_duration_s: float = 4.0,
+        capture_mode: str = "vad",
     ):
         self.sample_rate = sample_rate
         self.channels = channels
@@ -24,6 +25,7 @@ class AudioRecorder:
         self.silence_threshold_ms = silence_threshold_ms
         self.min_speech_duration_ms = min_speech_duration_ms
         self.max_phrase_duration_s = max_phrase_duration_s
+        self.capture_mode = capture_mode
 
         self.stream: Optional[sd.InputStream] = None
         self.is_recording = False
@@ -36,6 +38,7 @@ class AudioRecorder:
         self._preroll_buffer = collections.deque(maxlen=3)
         self._silence_start_time: Optional[float] = None
         self._speech_start_time: Optional[float] = None
+        self._has_voice = False
         
         # Callbacks
         self.on_speech_segment: Optional[Callable[[bytes, float], None]] = None
@@ -53,6 +56,7 @@ class AudioRecorder:
         self._preroll_buffer.clear()
         self._silence_start_time = None
         self._speech_start_time = None
+        self._has_voice = False
 
         # Automatically adapt sample rate and channel count to native CoreAudio device capabilities
         try:
@@ -68,15 +72,25 @@ class AudioRecorder:
 
         block_size = int(self.sample_rate * 0.05)  # 50ms chunks
 
-        self.stream = sd.InputStream(
-            samplerate=self.sample_rate,
-            channels=self.channels,
-            dtype="float32",
-            device=device_id,
-            blocksize=block_size,
-            callback=self._audio_callback,
-        )
-        self.stream.start()
+        try:
+            self.stream = sd.InputStream(
+                samplerate=self.sample_rate,
+                channels=self.channels,
+                dtype="float32",
+                device=device_id,
+                blocksize=block_size,
+                callback=self._audio_callback,
+            )
+            self.stream.start()
+        except Exception:
+            self.is_recording = False
+            if self.stream:
+                try:
+                    self.stream.close()
+                except Exception:
+                    pass
+            self.stream = None
+            raise
 
     def stop(self):
         if not self.is_recording:
@@ -94,17 +108,34 @@ class AudioRecorder:
             self._audio_buffer = list(self._preroll_buffer)
             self.is_speaking = True
             self._speech_start_time = time.time()
+            self._has_voice = False
         elif not active and self.push_to_talk_active:
             self.push_to_talk_active = False
             self.is_speaking = False
-            if self._audio_buffer:
+            if self._audio_buffer and self._has_voice:
                 duration = time.time() - (self._speech_start_time or time.time())
                 self._dispatch_segment(duration)
             self._audio_buffer = []
+            self._has_voice = False
 
     def _audio_callback(self, indata: np.ndarray, frames: int, time_info, status):
         if not self.is_recording:
             return
+
+        self.process_audio_block(indata)
+
+    def process_audio_block(self, indata: np.ndarray):
+        """Feeds one float32 audio block into the shared VAD/segmenter.
+
+        Native system-audio backends use this method too, which keeps phrase
+        detection identical for microphones, ScreenCaptureKit and WASAPI.
+        """
+        if not self.is_recording:
+            return
+
+        indata = np.asarray(indata, dtype=np.float32)
+        if indata.ndim == 1:
+            indata = indata.reshape(-1, 1)
 
         # If suppressed (e.g. Parrot is currently playing translated audio), discard input
         if self.is_suppressed:
@@ -112,6 +143,7 @@ class AudioRecorder:
                 self.is_speaking = False
                 self._audio_buffer = []
                 self._silence_start_time = None
+                self._has_voice = False
             return
 
         # Calculate RMS energy
@@ -126,6 +158,11 @@ class AudioRecorder:
         # Handle Push-to-Talk mode
         if self.push_to_talk_active:
             self._audio_buffer.append(indata.copy())
+            self._has_voice = True
+            return
+
+        if self.capture_mode == "ptt":
+            self._preroll_buffer.append(indata.copy())
             return
 
         # Handle VAD mode (Voice Activity Detection)
@@ -141,6 +178,7 @@ class AudioRecorder:
             
             self._silence_start_time = None
             self._audio_buffer.append(indata.copy())
+            self._has_voice = True
 
             # Fast chunking: if speech duration exceeds max_phrase_duration_s (e.g. 4s),
             # split and dispatch current phrase immediately so translation starts right away!
@@ -150,6 +188,7 @@ class AudioRecorder:
                 # Keep recording the rest of the speech seamlessly
                 self._audio_buffer = []
                 self._speech_start_time = now
+                self._has_voice = False
         else:
             if not self.is_speaking:
                 # Store silence in pre-roll buffer
@@ -169,10 +208,11 @@ class AudioRecorder:
                 if silence_elapsed_ms >= effective_silence_ms:
                     self.is_speaking = False
                     speech_duration = now - (self._speech_start_time or now)
-                    if speech_duration * 1000 >= self.min_speech_duration_ms and self._audio_buffer:
+                    if speech_duration * 1000 >= self.min_speech_duration_ms and self._audio_buffer and self._has_voice:
                         self._dispatch_segment(speech_duration)
                     self._audio_buffer = []
                     self._silence_start_time = None
+                    self._has_voice = False
 
     def _dispatch_segment(self, duration: float):
         if not self._audio_buffer:
@@ -193,4 +233,3 @@ class AudioRecorder:
 
         if self.on_speech_segment and self._loop and self._loop.is_running():
             self._loop.call_soon_threadsafe(self.on_speech_segment, wav_bytes, duration)
-

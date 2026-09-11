@@ -6,18 +6,18 @@ O usuário fala em Português no seu microfone, e o software traduz e sintetiza 
 
 ## Stack / Tecnologias
 - **Desktop Frontend**: Interface moderna desktop com suporte a overlay de legendas HUD, seleção de dispositivos de áudio e visualização de ondas sonoras.
-- **Backend / Engine de Áudio**: Python 3 com suporte a CoreAudio / PyAudio / SoundDevice.
-- **Microfone Virtual**: Integração com BlackHole / Perssua (driver virtual de áudio já presente no macOS).
+- **Backend / Engine de Áudio**: Python 3 com SoundDevice, ScreenCaptureKit/CoreAudio no macOS e WASAPI/SoundCard no Windows.
+- **Microfone Virtual**: Integração com BlackHole / Perssua no macOS e VB-CABLE / VoiceMeeter no Windows.
 - **Motores de IA**:
   1. **Modo OpenAI (Alta Fidelidade)**: Whisper / gpt-4o-transcribe + GPT-4o-mini (tradução contextual instantânea) + OpenAI TTS (tts-1).
-  2. **Modo Gratuito (100% Free / Offline-friendly)**: Deep-Translator / Google Translate + Edge-TTS (vozes neurais gratuitas de alta qualidade) / macOS `say` nativo.
+  2. **Modo Gratuito**: Deep-Translator / Google Translate + Edge-TTS, com voz nativa do sistema como fallback (`say` no macOS, System.Speech no Windows e `espeak` no Linux). Tradução e reconhecimento gratuitos ainda dependem de internet.
 
 ## Convenções e Padrões
 - UI moderna e limpa no padrão **Light Mode** por padrão (com alternador para Dark Mode no menu).
 - Estilo macOS nativo com bordas suaves (`rounded-lg`, sem formatos de pílula exagerados).
 - Cursor pointer em todos os elementos clicáveis e feedback visual imediato de status (gravando, traduzindo, falando).
 - Spotlight Tour onboarding usando máscara SVG nativa com recorte (`mask cutout`), garantindo que os cartões destacados nunca fiquem por cima do balão de explicação.
-- Latência minimizada com streaming e detecção de silêncio (VAD - Voice Activity Detection).
+- Latência minimizada com segmentação curta por VAD e fila ordenada de tradução/reprodução.
 
 ## Notas Importantes
 - No macOS, a injeção de áudio traduzido no Meet/Zoom/Discord usa o driver virtual **Perssua** (Existential Audio / BlackHole) como microfone da chamada.
@@ -36,5 +36,4 @@ O usuário fala em Português no seu microfone, e o software traduz e sintetiza 
 - **2026-09-09**: Restauro e Reorganização da Navbar e Botão de Ação: correção do dimensionamento do ícone de tradução no botão de ação inferior (eliminando o colapso por classe Tailwind não-padrão e aplicando dimensões explícitas 20x20); restauração do diâmetro e tipografia do avatar de perfil `DJ` (`w-8 h-8` com ponto de status `8px` no canto inferior direito); remoção completa do rótulo textual `• Inativo` da barra superior; e reposicionamento do botão de ajuda `?` para a extremidade direita, imediatamente antes do avatar `DJ`.
 - **2026-09-09**: Limpeza do Estado Vazio do Chat: remoção definitiva do subtítulo explicativo e reformatação da mensagem "Nenhuma fala registrada na chamada ainda" para tom cinza suave e desbotado (`text-slate-400 dark:text-slate-500 font-normal`), eliminando o preto/negrito anterior e tornando o visual minimalista e calmo.
 - **2026-09-09**: Ícone Nativo macOS com Squircle Branco e Sombra (Padrão Telegram/Safari): criação da base squircle contínua Apple HIG (824x824 em 1024x1024) com fundo branco, sutil gradiente vertical (2.5%), borda interna 1.5px e dupla sombra de elevação para `icon.png`, `AppIcon.icns` e `Parrot.app`. O papagaio verde canônico (`#10B981`) fica proporcionalmente centralizado (71% de altura), integrando-se nativamente à Dock/barra de tarefas ao lado de aplicativos como Telegram e Safari. Na barra de navegação da interface web, foi preservada a silhueta vetorial plana transparente (`icon-flat.svg`) para manter o visual limpo sem bloco artificial em modo escuro.
-
-
+- **2026-09-10**: Dublagem multiplataforma do áudio do sistema: captura nativa de qualquer áudio reproduzido via helper ScreenCaptureKit no macOS e WASAPI loopback/SoundCard no Windows, mantendo o áudio original e sobrepondo TTS em português. Substituição de `sounddevice.play()` por `OutputStream` independente por dispositivo, fila ordenada de falas, proteção contra autoescuta, fallback Perssua/BlackHole, seleção da saída física, persistência completa, permissões nativas e builds PyInstaller autocontidos para macOS/Windows.

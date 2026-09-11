@@ -1,7 +1,10 @@
 import io
 import os
+import sys
 import asyncio
 import subprocess
+import tempfile
+from pathlib import Path
 import speech_recognition as sr
 from deep_translator import GoogleTranslator
 import edge_tts
@@ -67,17 +70,46 @@ class FreeEngine(BaseTranslationEngine):
             if mp3_data:
                 return bytes(mp3_data)
         except Exception as e:
-            print(f"[FreeEngine] Edge-TTS warning: {e}, falling back to native macOS say")
+            print(f"[FreeEngine] Edge-TTS warning: {e}; usando a voz nativa do sistema")
 
-        # 2. Fallback to native macOS 'say' (Offline & built-in)
+        # 2. Offline operating-system fallback.
         loop = asyncio.get_event_loop()
-        def _macos_say():
-            temp_aiff = "/tmp/parrot_say.aiff"
-            temp_wav = "/tmp/parrot_say.wav"
-            voice_name = "Samantha" if lang == "en" else "Luciana"
-            subprocess.run(["say", "-v", voice_name, "-o", temp_aiff, text], check=True)
-            subprocess.run(["ffmpeg", "-y", "-i", temp_aiff, temp_wav], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            with open(temp_wav, "rb") as f:
-                return f.read()
 
-        return await loop.run_in_executor(None, _macos_say)
+        def _native_speech():
+            suffix = ".aiff" if sys.platform == "darwin" else ".wav"
+            fd, path_str = tempfile.mkstemp(prefix="parrot_tts_", suffix=suffix)
+            os.close(fd)
+            path = Path(path_str)
+            try:
+                if sys.platform == "darwin":
+                    voice_name = "Samantha" if lang == "en" else "Luciana"
+                    subprocess.run(["say", "-v", voice_name, "-o", str(path), text], check=True)
+                elif sys.platform == "win32":
+                    script = (
+                        "Add-Type -AssemblyName System.Speech; "
+                        "$voice = New-Object System.Speech.Synthesis.SpeechSynthesizer; "
+                        "$voice.SetOutputToWaveFile($env:PARROT_TTS_OUTPUT); "
+                        "$voice.Speak($env:PARROT_TTS_TEXT); $voice.Dispose()"
+                    )
+                    child_env = os.environ.copy()
+                    child_env["PARROT_TTS_OUTPUT"] = str(path)
+                    child_env["PARROT_TTS_TEXT"] = text
+                    subprocess.run(
+                        ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", script],
+                        check=True,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                        env=child_env,
+                    )
+                else:
+                    completed = subprocess.run(
+                        ["espeak", "--stdout", "-v", "en" if lang == "en" else "pt-br", text],
+                        check=True,
+                        capture_output=True,
+                    )
+                    return completed.stdout
+                return path.read_bytes()
+            finally:
+                path.unlink(missing_ok=True)
+
+        return await loop.run_in_executor(None, _native_speech)

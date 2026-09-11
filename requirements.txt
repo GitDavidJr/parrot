@@ -10,8 +10,9 @@ edge-tts>=6.1.12
 SpeechRecognition>=3.10.4
 miniaudio>=1.59
 pywebview>=5.1
-pyobjc-core>=10.0
-pyobjc-framework-Cocoa>=10.0
-pyobjc-framework-WebKit>=10.0
+pyobjc-core>=10.0; sys_platform == "darwin"
+pyobjc-framework-Cocoa>=10.0; sys_platform == "darwin"
+pyobjc-framework-WebKit>=10.0; sys_platform == "darwin"
+SoundCard>=0.4.3; sys_platform == "win32"
 pydantic>=2.8.0
 python-dotenv>=1.0.0
