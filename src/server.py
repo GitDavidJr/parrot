@@ -1,9 +1,13 @@
+import sys
+import subprocess
+import webbrowser
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Dict, Any
+from openai import AsyncOpenAI
 
 from src.config import settings, RESOURCE_DIR
 from src.service import parrot_service
@@ -17,9 +21,67 @@ UI_DIR = BASE_DIR / "src" / "ui"
 app = FastAPI(title="Parrot — Live Call Voice Translator")
 
 
+def check_system_permissions() -> Dict[str, Any]:
+    perms = {
+        "platform": sys.platform,
+        "microphone": {"granted": True, "status": "authorized"},
+        "system_audio": {"granted": True, "status": "authorized"},
+        "perssua_detected": False,
+        "openai_configured": bool(settings.openai_api_key),
+    }
+
+    # Detect Perssua or virtual audio cable
+    devices = get_audio_devices()
+    all_devs = devices.get("virtual_outputs", []) + devices.get("inputs", []) + devices.get("meeting_inputs", [])
+    perms["perssua_detected"] = any(
+        any(k in d["name"].lower() for k in ("perssua", "blackhole", "vb-cable", "voicemeeter"))
+        for d in all_devs
+    )
+
+    if sys.platform == "darwin":
+        # 1. Microphone authorization
+        try:
+            import objc
+            bundle_dict = {}
+            objc.loadBundle('AVFoundation', bundle_dict, bundle_path='/System/Library/Frameworks/AVFoundation.framework')
+            device_cls = bundle_dict.get('AVCaptureDevice')
+            if device_cls:
+                code = device_cls.authorizationStatusForMediaType_('soun')
+                perms["microphone"] = {
+                    "granted": code == 3,
+                    "status": "authorized" if code == 3 else ("denied" if code in (1, 2) else "not_determined"),
+                    "code": int(code),
+                }
+            else:
+                perms["microphone"] = {"granted": True, "status": "authorized"}
+        except Exception as e:
+            perms["microphone"] = {"granted": True, "status": "unknown", "error": str(e)}
+
+        # 2. ScreenCapture / System audio authorization
+        try:
+            from Quartz import CGPreflightScreenCaptureAccess
+            sc_granted = bool(CGPreflightScreenCaptureAccess())
+            perms["system_audio"] = {
+                "granted": sc_granted,
+                "status": "authorized" if sc_granted else "not_determined"
+            }
+        except Exception as e:
+            perms["system_audio"] = {"granted": True, "status": "unknown", "error": str(e)}
+
+    return perms
+
+
 def client_settings() -> Dict[str, Any]:
     data = settings.model_dump(exclude={"openai_api_key"})
     data["openai_api_key_configured"] = bool(settings.openai_api_key)
+    if settings.openai_api_key:
+        key = settings.openai_api_key.strip()
+        if len(key) > 10:
+            data["openai_api_key_masked"] = f"{key[:7]}...{key[-4:]}"
+        else:
+            data["openai_api_key_masked"] = "••••••••"
+    else:
+        data["openai_api_key_masked"] = ""
     return data
 
 app.add_middleware(
@@ -92,6 +154,90 @@ async def get_status():
 @app.get("/api/history")
 async def get_history():
     return parrot_service.history
+
+class PermissionRequest(BaseModel):
+    permission: str  # "microphone" | "system_audio"
+
+class ValidateOpenAIKeyRequest(BaseModel):
+    api_key: str
+    save_if_valid: bool = True
+
+class OpenUrlRequest(BaseModel):
+    url: str
+
+@app.get("/api/permissions")
+async def get_permissions():
+    return check_system_permissions()
+
+@app.post("/api/permissions/request")
+async def request_permission(payload: PermissionRequest):
+    perm = payload.permission
+    if sys.platform == "darwin":
+        if perm == "microphone":
+            try:
+                import objc
+                bundle_dict = {}
+                objc.loadBundle('AVFoundation', bundle_dict, bundle_path='/System/Library/Frameworks/AVFoundation.framework')
+                device_cls = bundle_dict.get('AVCaptureDevice')
+                code = device_cls.authorizationStatusForMediaType_('soun') if device_cls else 3
+                if code in (1, 2):  # Denied or restricted
+                    subprocess.run(["open", "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"], check=False)
+                else:
+                    import sounddevice as sd
+                    with sd.InputStream(channels=1, samplerate=16000):
+                        pass
+            except Exception:
+                subprocess.run(["open", "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"], check=False)
+        elif perm == "system_audio":
+            try:
+                from Quartz import CGRequestScreenCaptureAccess
+                CGRequestScreenCaptureAccess()
+                subprocess.run(["open", "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"], check=False)
+            except Exception:
+                subprocess.run(["open", "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"], check=False)
+
+    return check_system_permissions()
+
+@app.post("/api/validate-openai-key")
+async def validate_openai_key(payload: ValidateOpenAIKeyRequest):
+    key = payload.api_key.strip()
+    if not key:
+        raise HTTPException(status_code=400, detail="Por favor, insira uma chave de API da OpenAI.")
+
+    if not key.startswith("sk-"):
+        raise HTTPException(status_code=400, detail="Chave inválida. Chaves da OpenAI geralmente iniciam com 'sk-'.")
+
+    client = AsyncOpenAI(api_key=key, timeout=7.0)
+    try:
+        await client.models.list()
+    except Exception as e:
+        err = str(e).lower()
+        if "incorrect api key" in err or "invalid_api_key" in err or "401" in err:
+            raise HTTPException(status_code=400, detail="Chave OpenAI incorreta ou não autorizada.")
+        elif "quota" in err or "billing" in err:
+            raise HTTPException(status_code=400, detail="Chave válida, mas sua conta OpenAI está sem saldo ou créditos.")
+        else:
+            raise HTTPException(status_code=400, detail=f"Falha ao validar na OpenAI: {str(e)[:100]}")
+
+    if payload.save_if_valid:
+        parrot_service.update_settings({
+            "openai_api_key": key,
+            "engine": "openai"
+        })
+
+    return {
+        "valid": True,
+        "message": "Chave OpenAI validada e salva com sucesso!",
+        "settings": client_settings()
+    }
+
+@app.post("/api/open-url")
+async def open_url(payload: OpenUrlRequest):
+    url = payload.url.strip()
+    if not (url.startswith("http://") or url.startswith("https://")):
+        raise HTTPException(status_code=400, detail="URL inválida.")
+    webbrowser.open(url)
+    return {"success": True}
 
 @app.get("/api/devices")
 async def list_devices():

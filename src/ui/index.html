@@ -170,13 +170,13 @@
               <span id="theme-status-text" class="text-[10px] font-mono text-slate-400">Claro</span>
             </button>
 
-            <!-- Como Usar (Tour Guiado - Movido para dentro do Dropdown) -->
-            <button onclick="startTour(); closeUserDropdown();" class="cursor-pointer w-full text-left px-4 py-2.5 text-emerald-600 dark:text-emerald-400 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center justify-between border-t border-slate-100 dark:border-slate-700/60 mt-1 font-semibold">
+            <!-- Tutorial & Setup Inicial Onboarding -->
+            <button onclick="openOnboardingModal(1); closeUserDropdown();" class="cursor-pointer w-full text-left px-4 py-2.5 text-emerald-600 dark:text-emerald-400 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center justify-between border-t border-slate-100 dark:border-slate-700/60 mt-1 font-semibold">
               <span class="flex items-center gap-2">
-                <span>❓</span>
-                <span>Como Usar (Tour Guiado)</span>
+                <span>🧭</span>
+                <span>Tutorial & Setup Inicial</span>
               </span>
-              <span class="text-[10px] bg-emerald-100 dark:bg-emerald-950/80 px-1.5 py-0.5 rounded text-emerald-700 dark:text-emerald-300 font-mono">4 passos</span>
+              <span class="text-[10px] bg-emerald-100 dark:bg-emerald-950/80 px-1.5 py-0.5 rounded text-emerald-700 dark:text-emerald-300 font-mono">3 passos</span>
             </button>
           </div>
         </div>
@@ -414,8 +414,14 @@
             </div>
           </div>
           <div>
-            <label class="block font-medium text-slate-600 dark:text-slate-400 mb-1">Chave OpenAI:</label>
-            <input id="input-openai-key" type="password" autocomplete="off" placeholder="Já configurada — deixe vazio para manter" class="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md p-2 text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500" />
+            <div class="flex items-center justify-between mb-1">
+              <label class="block font-medium text-slate-600 dark:text-slate-400">Chave OpenAI:</label>
+              <button type="button" onclick="testModalOpenAIKey()" id="btn-test-modal-key" class="cursor-pointer text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">
+                Validar Chave
+              </button>
+            </div>
+            <input id="input-openai-key" type="password" autocomplete="off" placeholder="Já configurada — deixe vazio para manter" class="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md p-2 text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 font-mono text-xs" />
+            <div id="modal-key-feedback" class="hidden text-[11px] mt-1"></div>
           </div>
         </div>
 
@@ -456,6 +462,177 @@
       <div class="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-700">
         <button onclick="closeConfigModal()" class="cursor-pointer px-4 py-2 rounded-md text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">Cancelar</button>
         <button onclick="saveConfigModal()" class="cursor-pointer px-5 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 font-bold text-white shadow-xs">Salvar Configurações</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step-by-Step Onboarding Modal: "Configuração Inicial" -->
+  <div id="modal-onboarding" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-[99990] flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full shadow-2xl overflow-hidden flex flex-col transition-all">
+      <!-- Modal Header -->
+      <div class="px-5 pt-4 pb-3 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <img src="/assets/icon-flat.svg" alt="Parrot" class="w-5 h-5" />
+          <span class="font-bold text-sm text-slate-900 dark:text-white">Configuração Inicial</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span id="onboard-step-badge" class="px-2 py-0.5 rounded text-[11px] font-mono font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800">
+            Passo 1 de 3
+          </span>
+          <button onclick="closeOnboardingModal()" class="cursor-pointer text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-md text-xs transition-colors" title="Fechar">
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <!-- Step Indicator Bar -->
+      <div class="grid grid-cols-3 gap-1.5 px-5 pb-3">
+        <div id="onboard-bar-1" class="h-1 rounded-full bg-emerald-500 transition-colors"></div>
+        <div id="onboard-bar-2" class="h-1 rounded-full bg-slate-200 dark:bg-slate-800 transition-colors"></div>
+        <div id="onboard-bar-3" class="h-1 rounded-full bg-slate-200 dark:bg-slate-800 transition-colors"></div>
+      </div>
+
+      <!-- Step 1: Permissões de Áudio -->
+      <div id="onboard-step-1" class="p-5 pt-1 space-y-4">
+        <div>
+          <h4 class="font-bold text-base text-slate-900 dark:text-white">Permissões de Áudio</h4>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">O Parrot precisa de permissão para ouvir sua voz e as reuniões.</p>
+        </div>
+
+        <div class="space-y-2.5">
+          <!-- Item: Microfone -->
+          <div class="flex items-center justify-between p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-md bg-emerald-50 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
+              </div>
+              <div>
+                <div class="font-semibold text-xs text-slate-900 dark:text-white">Microfone</div>
+                <div class="text-[11px] text-slate-500 dark:text-slate-400">Captura sua voz em português</div>
+              </div>
+            </div>
+            <div id="onboard-perm-mic">
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-500">Verificando...</span>
+            </div>
+          </div>
+
+          <!-- Item: Áudio do Sistema -->
+          <div class="flex items-center justify-between p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-md bg-sky-50 dark:bg-sky-950/60 flex items-center justify-center text-sky-600 dark:text-sky-400 shrink-0">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
+              </div>
+              <div>
+                <div class="font-semibold text-xs text-slate-900 dark:text-white">Áudio do Sistema</div>
+                <div class="text-[11px] text-slate-500 dark:text-slate-400">Ouve e traduz a reunião</div>
+              </div>
+            </div>
+            <div id="onboard-perm-sys">
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-500">Verificando...</span>
+            </div>
+          </div>
+
+          <!-- Item: Driver Perssua -->
+          <div class="flex items-center justify-between p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-md bg-purple-50 dark:bg-purple-950/60 flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+              </div>
+              <div>
+                <div class="font-semibold text-xs text-slate-900 dark:text-white">Driver Perssua</div>
+                <div class="text-[11px] text-slate-500 dark:text-slate-400">Microfone virtual da chamada</div>
+              </div>
+            </div>
+            <div id="onboard-perm-perssua">
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-500">Detectando...</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-end pt-2 border-t border-slate-100 dark:border-slate-800">
+          <button onclick="goToOnboardStep(2)" class="cursor-pointer px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs transition-colors flex items-center gap-1.5">
+            <span>Continuar</span>
+            <span>→</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 2: Chave OpenAI -->
+      <div id="onboard-step-2" class="p-5 pt-1 space-y-4 hidden">
+        <div>
+          <h4 class="font-bold text-base text-slate-900 dark:text-white">Chave de API OpenAI</h4>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Insira seu token para transcrição Whisper e tradução ao vivo.</p>
+        </div>
+
+        <div class="space-y-2">
+          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300">OpenAI API Key</label>
+          <div class="relative flex items-center">
+            <input id="onboard-input-key" type="password" placeholder="sk-proj-..." autocomplete="off" spellcheck="false" class="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg pl-3 pr-20 py-2.5 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 transition-colors" />
+            <div class="absolute right-1.5 flex items-center gap-1">
+              <button type="button" onclick="toggleOnboardKeyVisibility()" id="btn-toggle-key-eye" class="cursor-pointer p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs transition-colors" title="Mostrar/Ocultar chave">
+                👁️
+              </button>
+              <button type="button" onclick="validateOnboardKey()" id="btn-onboard-validate" class="cursor-pointer px-2.5 py-1 rounded bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/80 dark:hover:bg-emerald-900 text-emerald-700 dark:text-emerald-300 font-semibold text-[11px] border border-emerald-200 dark:border-emerald-800 transition-colors">
+                Validar
+              </button>
+            </div>
+          </div>
+          <div class="flex items-center justify-between text-[11px]">
+            <button type="button" onclick="openOpenAIPlatformLink()" class="cursor-pointer text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1">
+              <span>Criar chave na OpenAI</span>
+              <span>↗</span>
+            </button>
+            <span id="onboard-key-status-text" class="text-slate-400 dark:text-slate-500 text-[10px]"></span>
+          </div>
+          <div id="onboard-key-feedback" class="hidden p-2.5 rounded-lg text-xs leading-tight"></div>
+        </div>
+
+        <div class="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
+          <button onclick="goToOnboardStep(1)" class="cursor-pointer px-4 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold text-xs transition-colors">
+            ← Voltar
+          </button>
+          <button onclick="submitOnboardStep2()" id="btn-onboard-step2-next" class="cursor-pointer px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs transition-colors flex items-center gap-1.5">
+            <span>Continuar</span>
+            <span>→</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 3: Mini Tutorial (Microfone na Chamada) -->
+      <div id="onboard-step-3" class="p-5 pt-1 space-y-3.5 hidden">
+        <div>
+          <h4 class="font-bold text-base text-slate-900 dark:text-white">Como usar na sua chamada</h4>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Selecione o Perssua na reunião para os participantes ouvirem sua tradução.</p>
+        </div>
+
+        <!-- Annotated Print with Arrow -->
+        <div class="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2 flex justify-center items-center overflow-hidden">
+          <img src="/assets/perssua-mic-guide-annotated.png" alt="Selecione Perssua como microfone" class="max-h-52 w-auto object-contain rounded-md shadow-xs" />
+        </div>
+
+        <!-- Clear note -->
+        <div class="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 text-xs space-y-1">
+          <div class="flex items-center gap-1.5 font-semibold text-slate-900 dark:text-white">
+            <span class="text-emerald-500">✓</span>
+            <span>No Google Meet, Zoom ou Discord:</span>
+          </div>
+          <p class="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+            Selecione <strong>Perssua</strong> como seu microfone nas configurações de áudio da chamada.
+          </p>
+          <p class="text-[11px] text-slate-400 dark:text-slate-500 italic">
+            Não precisa fazer isso agora — apenas quando entrar em uma reunião.
+          </p>
+        </div>
+
+        <div class="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
+          <button onclick="goToOnboardStep(2)" class="cursor-pointer px-4 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold text-xs transition-colors">
+            ← Voltar
+          </button>
+          <button onclick="finishOnboarding()" class="cursor-pointer px-6 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs transition-colors flex items-center gap-1.5">
+            <span>Entendi!</span>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -640,9 +817,9 @@ function handleServerMessage(msg) {
       data.history.forEach(appendMessageCard);
     }
 
-    // Auto launch tour on first visit
-    if (!localStorage.getItem('parrot_tour_shown')) {
-      setTimeout(startTour, 700);
+    // Auto launch onboarding on first visit or if OpenAI API key is not yet configured
+    if (!localStorage.getItem('parrot_onboarding_completed') || !(data.settings && data.settings.openai_api_key_configured)) {
+      setTimeout(() => openOnboardingModal(1), 500);
     }
   } else if (type === 'audio_level') {
     updateMeter(data.level, data.is_speaking);
@@ -793,6 +970,10 @@ async function handleBottomAction(e) {
   const text = input ? input.value.trim() : '';
 
   if (text) {
+    if (currentStatus.settings.engine === 'openai' && !currentStatus.settings.openai_api_key_configured) {
+      openOnboardingModal(2);
+      return;
+    }
     input.value = '';
     updateBottomButtonState();
     await fetch('/api/quick-speak', {
@@ -883,6 +1064,10 @@ async function toggleSession() {
   const btnText = document.getElementById('btn-bottom-text');
 
   const willStart = !currentStatus.is_active;
+  if (willStart && currentStatus.settings.engine === 'openai' && !currentStatus.settings.openai_api_key_configured) {
+    openOnboardingModal(2);
+    return;
+  }
   
   // Immediate tactile feedback
   if (btnText) btnText.textContent = willStart ? "LIGANDO..." : "PARANDO...";
@@ -1273,8 +1458,314 @@ async function testAudioOutput() {
   }
 }
 
+async function testModalOpenAIKey() {
+  const input = document.getElementById('input-openai-key');
+  const btn = document.getElementById('btn-test-modal-key');
+  const feedback = document.getElementById('modal-key-feedback');
+  const val = input ? input.value.trim() : '';
+
+  if (!val) {
+    if (feedback) {
+      feedback.className = 'text-[11px] text-amber-600 dark:text-amber-400 mt-1';
+      feedback.textContent = 'Digite uma chave para validar.';
+      feedback.classList.remove('hidden');
+    }
+    return;
+  }
+
+  if (btn) btn.textContent = 'Validando...';
+  try {
+    const res = await fetch('/api/validate-openai-key', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ api_key: val, save_if_valid: false })
+    });
+    const data = await res.json();
+    if (res.ok && data.valid) {
+      if (feedback) {
+        feedback.className = 'text-[11px] text-emerald-600 dark:text-emerald-400 mt-1';
+        feedback.textContent = '✓ Chave válida e autorizada!';
+        feedback.classList.remove('hidden');
+      }
+    } else {
+      if (feedback) {
+        feedback.className = 'text-[11px] text-red-600 dark:text-red-400 mt-1';
+        feedback.textContent = '⚠️ ' + (data.detail || data.error || 'Chave inválida.');
+        feedback.classList.remove('hidden');
+      }
+    }
+  } catch (e) {
+    if (feedback) {
+      feedback.className = 'text-[11px] text-red-600 dark:text-red-400 mt-1';
+      feedback.textContent = 'Erro ao conectar: ' + e;
+      feedback.classList.remove('hidden');
+    }
+  } finally {
+    if (btn) btn.textContent = 'Validar Chave';
+  }
+}
+
 // -------------------------------------------------------------
-// 7. Interactive Spotlight Onboarding Tour (SVG Cutout Mask)
+// 7. Onboarding Step-by-Step Controller (Setup Inicial)
+// -------------------------------------------------------------
+let currentOnboardStep = 1;
+
+async function openOnboardingModal(step = 1) {
+  const modal = document.getElementById('modal-onboarding');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  goToOnboardStep(step);
+  await refreshPermissions();
+  initOnboardOpenAIField();
+}
+
+function closeOnboardingModal() {
+  const modal = document.getElementById('modal-onboarding');
+  if (modal) modal.classList.add('hidden');
+}
+
+function goToOnboardStep(step) {
+  currentOnboardStep = step;
+  const badge = document.getElementById('onboard-step-badge');
+  if (badge) badge.textContent = `Passo ${step} de 3`;
+
+  // Update progress bars & visible step panel
+  for (let i = 1; i <= 3; i++) {
+    const bar = document.getElementById(`onboard-bar-${i}`);
+    const stepEl = document.getElementById(`onboard-step-${i}`);
+    if (bar) {
+      if (i <= step) {
+        bar.className = 'h-1 rounded-full bg-emerald-500 transition-colors';
+      } else {
+        bar.className = 'h-1 rounded-full bg-slate-200 dark:bg-slate-800 transition-colors';
+      }
+    }
+    if (stepEl) {
+      if (i === step) {
+        stepEl.classList.remove('hidden');
+      } else {
+        stepEl.classList.add('hidden');
+      }
+    }
+  }
+
+  if (step === 1) {
+    refreshPermissions();
+  } else if (step === 2) {
+    initOnboardOpenAIField();
+  }
+}
+
+async function refreshPermissions() {
+  const micEl = document.getElementById('onboard-perm-mic');
+  const sysEl = document.getElementById('onboard-perm-sys');
+  const perssuaEl = document.getElementById('onboard-perm-perssua');
+
+  try {
+    const res = await fetch('/api/permissions');
+    if (!res.ok) return;
+    const perms = await res.json();
+
+    // 1. Microfone
+    if (micEl) {
+      if (perms.microphone && perms.microphone.granted) {
+        micEl.innerHTML = `
+          <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+            ✓ Liberado
+          </span>`;
+      } else {
+        micEl.innerHTML = `
+          <button onclick="requestSystemPermission('microphone')" class="cursor-pointer px-3 py-1 rounded-md text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition-colors">
+            Liberar
+          </button>`;
+      }
+    }
+
+    // 2. Áudio do Sistema
+    if (sysEl) {
+      if (perms.system_audio && perms.system_audio.granted) {
+        sysEl.innerHTML = `
+          <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+            ✓ Liberado
+          </span>`;
+      } else {
+        sysEl.innerHTML = `
+          <button onclick="requestSystemPermission('system_audio')" class="cursor-pointer px-3 py-1 rounded-md text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition-colors">
+            Liberar
+          </button>`;
+      }
+    }
+
+    // 3. Driver Perssua
+    if (perssuaEl) {
+      if (perms.perssua_detected) {
+        perssuaEl.innerHTML = `
+          <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+            ✓ Detectado
+          </span>`;
+      } else {
+        perssuaEl.innerHTML = `
+          <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+            Pronto
+          </span>`;
+      }
+    }
+  } catch (err) {
+    console.error('Erro ao verificar permissões:', err);
+  }
+}
+
+async function requestSystemPermission(permType) {
+  try {
+    await fetch('/api/permissions/request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ permission: permType })
+    });
+    setTimeout(refreshPermissions, 900);
+  } catch (err) {
+    console.error('Erro ao requisitar permissão:', err);
+  }
+}
+
+function initOnboardOpenAIField() {
+  const inputKey = document.getElementById('onboard-input-key');
+  const statusText = document.getElementById('onboard-key-status-text');
+  const feedback = document.getElementById('onboard-key-feedback');
+
+  if (feedback) {
+    feedback.className = 'hidden';
+    feedback.textContent = '';
+  }
+
+  if (currentStatus.settings && currentStatus.settings.openai_api_key_configured) {
+    if (inputKey && !inputKey.value) {
+      const masked = currentStatus.settings.openai_api_key_masked || '••••••••••••';
+      inputKey.placeholder = `Configurada (${masked})`;
+    }
+    if (statusText) statusText.textContent = 'Chave ativa';
+  }
+}
+
+function toggleOnboardKeyVisibility() {
+  const input = document.getElementById('onboard-input-key');
+  const eye = document.getElementById('btn-toggle-key-eye');
+  if (!input) return;
+  if (input.type === 'password') {
+    input.type = 'text';
+    if (eye) eye.textContent = '🔒';
+  } else {
+    input.type = 'password';
+    if (eye) eye.textContent = '👁️';
+  }
+}
+
+async function validateOnboardKey() {
+  const inputKey = document.getElementById('onboard-input-key');
+  const btn = document.getElementById('btn-onboard-validate');
+  const feedback = document.getElementById('onboard-key-feedback');
+  const val = inputKey ? inputKey.value.trim() : '';
+
+  if (!val) {
+    if (currentStatus.settings && currentStatus.settings.openai_api_key_configured) {
+      if (feedback) {
+        feedback.className = 'p-2.5 rounded-lg text-xs bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300';
+        feedback.textContent = '✓ A chave existente já está ativa e configurada.';
+      }
+      return true;
+    }
+    if (feedback) {
+      feedback.className = 'p-2.5 rounded-lg text-xs bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300';
+      feedback.textContent = 'Por favor, insira sua chave da OpenAI que inicia com "sk-".';
+    }
+    return false;
+  }
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Validando...';
+  }
+
+  try {
+    const res = await fetch('/api/validate-openai-key', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ api_key: val, save_if_valid: true })
+    });
+    const data = await res.json();
+    if (res.ok && data.valid) {
+      if (feedback) {
+        feedback.className = 'p-2.5 rounded-lg text-xs bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300';
+        feedback.textContent = '✓ ' + (data.message || 'Chave validada e conectada com sucesso!');
+      }
+      if (data.settings) {
+        Object.assign(currentStatus.settings, data.settings);
+        updateUIState();
+      }
+      return true;
+    } else {
+      if (feedback) {
+        feedback.className = 'p-2.5 rounded-lg text-xs bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300';
+        feedback.textContent = '⚠️ ' + (data.detail || data.error || 'Chave inválida. Verifique os caracteres.');
+      }
+      return false;
+    }
+  } catch (e) {
+    if (feedback) {
+      feedback.className = 'p-2.5 rounded-lg text-xs bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300';
+      feedback.textContent = 'Erro de conexão ao validar chave: ' + e;
+    }
+    return false;
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Validar';
+    }
+  }
+}
+
+async function submitOnboardStep2() {
+  const inputKey = document.getElementById('onboard-input-key');
+  const val = inputKey ? inputKey.value.trim() : '';
+
+  if (!val) {
+    if (currentStatus.settings && currentStatus.settings.openai_api_key_configured) {
+      goToOnboardStep(3);
+      return;
+    }
+    const feedback = document.getElementById('onboard-key-feedback');
+    if (feedback) {
+      feedback.className = 'p-2.5 rounded-lg text-xs bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300';
+      feedback.textContent = 'Por favor, insira sua chave da OpenAI para prosseguir.';
+    }
+    return;
+  }
+
+  const ok = await validateOnboardKey();
+  if (ok) {
+    goToOnboardStep(3);
+  }
+}
+
+async function openOpenAIPlatformLink() {
+  try {
+    await fetch('/api/open-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: 'https://platform.openai.com/api-keys' })
+    });
+  } catch (_) {
+    window.open('https://platform.openai.com/api-keys', '_blank');
+  }
+}
+
+function finishOnboarding() {
+  localStorage.setItem('parrot_onboarding_completed', 'true');
+  closeOnboardingModal();
+}
+
+// -------------------------------------------------------------
+// 8. Interactive Spotlight Onboarding Tour (SVG Cutout Mask)
 // -------------------------------------------------------------
 let tourIndex = 0;
 const tourSteps = [

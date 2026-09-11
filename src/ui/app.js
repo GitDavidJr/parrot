@@ -128,9 +128,9 @@ function handleServerMessage(msg) {
       data.history.forEach(appendMessageCard);
     }
 
-    // Auto launch tour on first visit
-    if (!localStorage.getItem('parrot_tour_shown')) {
-      setTimeout(startTour, 700);
+    // Auto launch onboarding on first visit or if OpenAI API key is not yet configured
+    if (!localStorage.getItem('parrot_onboarding_completed') || !(data.settings && data.settings.openai_api_key_configured)) {
+      setTimeout(() => openOnboardingModal(1), 500);
     }
   } else if (type === 'audio_level') {
     updateMeter(data.level, data.is_speaking);
@@ -281,6 +281,10 @@ async function handleBottomAction(e) {
   const text = input ? input.value.trim() : '';
 
   if (text) {
+    if (currentStatus.settings.engine === 'openai' && !currentStatus.settings.openai_api_key_configured) {
+      openOnboardingModal(2);
+      return;
+    }
     input.value = '';
     updateBottomButtonState();
     await fetch('/api/quick-speak', {
@@ -371,6 +375,10 @@ async function toggleSession() {
   const btnText = document.getElementById('btn-bottom-text');
 
   const willStart = !currentStatus.is_active;
+  if (willStart && currentStatus.settings.engine === 'openai' && !currentStatus.settings.openai_api_key_configured) {
+    openOnboardingModal(2);
+    return;
+  }
   
   // Immediate tactile feedback
   if (btnText) btnText.textContent = willStart ? "LIGANDO..." : "PARANDO...";
@@ -759,8 +767,314 @@ async function testAudioOutput() {
   }
 }
 
+async function testModalOpenAIKey() {
+  const input = document.getElementById('input-openai-key');
+  const btn = document.getElementById('btn-test-modal-key');
+  const feedback = document.getElementById('modal-key-feedback');
+  const val = input ? input.value.trim() : '';
+
+  if (!val) {
+    if (feedback) {
+      feedback.className = 'text-[11px] text-amber-600 dark:text-amber-400 mt-1';
+      feedback.textContent = 'Digite uma chave para validar.';
+      feedback.classList.remove('hidden');
+    }
+    return;
+  }
+
+  if (btn) btn.textContent = 'Validando...';
+  try {
+    const res = await fetch('/api/validate-openai-key', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ api_key: val, save_if_valid: false })
+    });
+    const data = await res.json();
+    if (res.ok && data.valid) {
+      if (feedback) {
+        feedback.className = 'text-[11px] text-emerald-600 dark:text-emerald-400 mt-1';
+        feedback.textContent = '✓ Chave válida e autorizada!';
+        feedback.classList.remove('hidden');
+      }
+    } else {
+      if (feedback) {
+        feedback.className = 'text-[11px] text-red-600 dark:text-red-400 mt-1';
+        feedback.textContent = '⚠️ ' + (data.detail || data.error || 'Chave inválida.');
+        feedback.classList.remove('hidden');
+      }
+    }
+  } catch (e) {
+    if (feedback) {
+      feedback.className = 'text-[11px] text-red-600 dark:text-red-400 mt-1';
+      feedback.textContent = 'Erro ao conectar: ' + e;
+      feedback.classList.remove('hidden');
+    }
+  } finally {
+    if (btn) btn.textContent = 'Validar Chave';
+  }
+}
+
 // -------------------------------------------------------------
-// 7. Interactive Spotlight Onboarding Tour (SVG Cutout Mask)
+// 7. Onboarding Step-by-Step Controller (Setup Inicial)
+// -------------------------------------------------------------
+let currentOnboardStep = 1;
+
+async function openOnboardingModal(step = 1) {
+  const modal = document.getElementById('modal-onboarding');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  goToOnboardStep(step);
+  await refreshPermissions();
+  initOnboardOpenAIField();
+}
+
+function closeOnboardingModal() {
+  const modal = document.getElementById('modal-onboarding');
+  if (modal) modal.classList.add('hidden');
+}
+
+function goToOnboardStep(step) {
+  currentOnboardStep = step;
+  const badge = document.getElementById('onboard-step-badge');
+  if (badge) badge.textContent = `Passo ${step} de 3`;
+
+  // Update progress bars & visible step panel
+  for (let i = 1; i <= 3; i++) {
+    const bar = document.getElementById(`onboard-bar-${i}`);
+    const stepEl = document.getElementById(`onboard-step-${i}`);
+    if (bar) {
+      if (i <= step) {
+        bar.className = 'h-1 rounded-full bg-emerald-500 transition-colors';
+      } else {
+        bar.className = 'h-1 rounded-full bg-slate-200 dark:bg-slate-800 transition-colors';
+      }
+    }
+    if (stepEl) {
+      if (i === step) {
+        stepEl.classList.remove('hidden');
+      } else {
+        stepEl.classList.add('hidden');
+      }
+    }
+  }
+
+  if (step === 1) {
+    refreshPermissions();
+  } else if (step === 2) {
+    initOnboardOpenAIField();
+  }
+}
+
+async function refreshPermissions() {
+  const micEl = document.getElementById('onboard-perm-mic');
+  const sysEl = document.getElementById('onboard-perm-sys');
+  const perssuaEl = document.getElementById('onboard-perm-perssua');
+
+  try {
+    const res = await fetch('/api/permissions');
+    if (!res.ok) return;
+    const perms = await res.json();
+
+    // 1. Microfone
+    if (micEl) {
+      if (perms.microphone && perms.microphone.granted) {
+        micEl.innerHTML = `
+          <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+            ✓ Liberado
+          </span>`;
+      } else {
+        micEl.innerHTML = `
+          <button onclick="requestSystemPermission('microphone')" class="cursor-pointer px-3 py-1 rounded-md text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition-colors">
+            Liberar
+          </button>`;
+      }
+    }
+
+    // 2. Áudio do Sistema
+    if (sysEl) {
+      if (perms.system_audio && perms.system_audio.granted) {
+        sysEl.innerHTML = `
+          <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+            ✓ Liberado
+          </span>`;
+      } else {
+        sysEl.innerHTML = `
+          <button onclick="requestSystemPermission('system_audio')" class="cursor-pointer px-3 py-1 rounded-md text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition-colors">
+            Liberar
+          </button>`;
+      }
+    }
+
+    // 3. Driver Perssua
+    if (perssuaEl) {
+      if (perms.perssua_detected) {
+        perssuaEl.innerHTML = `
+          <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+            ✓ Detectado
+          </span>`;
+      } else {
+        perssuaEl.innerHTML = `
+          <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+            Pronto
+          </span>`;
+      }
+    }
+  } catch (err) {
+    console.error('Erro ao verificar permissões:', err);
+  }
+}
+
+async function requestSystemPermission(permType) {
+  try {
+    await fetch('/api/permissions/request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ permission: permType })
+    });
+    setTimeout(refreshPermissions, 900);
+  } catch (err) {
+    console.error('Erro ao requisitar permissão:', err);
+  }
+}
+
+function initOnboardOpenAIField() {
+  const inputKey = document.getElementById('onboard-input-key');
+  const statusText = document.getElementById('onboard-key-status-text');
+  const feedback = document.getElementById('onboard-key-feedback');
+
+  if (feedback) {
+    feedback.className = 'hidden';
+    feedback.textContent = '';
+  }
+
+  if (currentStatus.settings && currentStatus.settings.openai_api_key_configured) {
+    if (inputKey && !inputKey.value) {
+      const masked = currentStatus.settings.openai_api_key_masked || '••••••••••••';
+      inputKey.placeholder = `Configurada (${masked})`;
+    }
+    if (statusText) statusText.textContent = 'Chave ativa';
+  }
+}
+
+function toggleOnboardKeyVisibility() {
+  const input = document.getElementById('onboard-input-key');
+  const eye = document.getElementById('btn-toggle-key-eye');
+  if (!input) return;
+  if (input.type === 'password') {
+    input.type = 'text';
+    if (eye) eye.textContent = '🔒';
+  } else {
+    input.type = 'password';
+    if (eye) eye.textContent = '👁️';
+  }
+}
+
+async function validateOnboardKey() {
+  const inputKey = document.getElementById('onboard-input-key');
+  const btn = document.getElementById('btn-onboard-validate');
+  const feedback = document.getElementById('onboard-key-feedback');
+  const val = inputKey ? inputKey.value.trim() : '';
+
+  if (!val) {
+    if (currentStatus.settings && currentStatus.settings.openai_api_key_configured) {
+      if (feedback) {
+        feedback.className = 'p-2.5 rounded-lg text-xs bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300';
+        feedback.textContent = '✓ A chave existente já está ativa e configurada.';
+      }
+      return true;
+    }
+    if (feedback) {
+      feedback.className = 'p-2.5 rounded-lg text-xs bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300';
+      feedback.textContent = 'Por favor, insira sua chave da OpenAI que inicia com "sk-".';
+    }
+    return false;
+  }
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Validando...';
+  }
+
+  try {
+    const res = await fetch('/api/validate-openai-key', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ api_key: val, save_if_valid: true })
+    });
+    const data = await res.json();
+    if (res.ok && data.valid) {
+      if (feedback) {
+        feedback.className = 'p-2.5 rounded-lg text-xs bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300';
+        feedback.textContent = '✓ ' + (data.message || 'Chave validada e conectada com sucesso!');
+      }
+      if (data.settings) {
+        Object.assign(currentStatus.settings, data.settings);
+        updateUIState();
+      }
+      return true;
+    } else {
+      if (feedback) {
+        feedback.className = 'p-2.5 rounded-lg text-xs bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300';
+        feedback.textContent = '⚠️ ' + (data.detail || data.error || 'Chave inválida. Verifique os caracteres.');
+      }
+      return false;
+    }
+  } catch (e) {
+    if (feedback) {
+      feedback.className = 'p-2.5 rounded-lg text-xs bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300';
+      feedback.textContent = 'Erro de conexão ao validar chave: ' + e;
+    }
+    return false;
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Validar';
+    }
+  }
+}
+
+async function submitOnboardStep2() {
+  const inputKey = document.getElementById('onboard-input-key');
+  const val = inputKey ? inputKey.value.trim() : '';
+
+  if (!val) {
+    if (currentStatus.settings && currentStatus.settings.openai_api_key_configured) {
+      goToOnboardStep(3);
+      return;
+    }
+    const feedback = document.getElementById('onboard-key-feedback');
+    if (feedback) {
+      feedback.className = 'p-2.5 rounded-lg text-xs bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300';
+      feedback.textContent = 'Por favor, insira sua chave da OpenAI para prosseguir.';
+    }
+    return;
+  }
+
+  const ok = await validateOnboardKey();
+  if (ok) {
+    goToOnboardStep(3);
+  }
+}
+
+async function openOpenAIPlatformLink() {
+  try {
+    await fetch('/api/open-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: 'https://platform.openai.com/api-keys' })
+    });
+  } catch (_) {
+    window.open('https://platform.openai.com/api-keys', '_blank');
+  }
+}
+
+function finishOnboarding() {
+  localStorage.setItem('parrot_onboarding_completed', 'true');
+  closeOnboardingModal();
+}
+
+// -------------------------------------------------------------
+// 8. Interactive Spotlight Onboarding Tour (SVG Cutout Mask)
 // -------------------------------------------------------------
 let tourIndex = 0;
 const tourSteps = [
